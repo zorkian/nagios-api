@@ -1,0 +1,14 @@
+nagios-api
+
+This is a simple REST interface to Nagios.  Run this on your Nagios host and
+then sit back and enjoy a much easier, more straightforward way to accomplish
+things with Nagios.
+
+Usage is pretty easy:
+
+    ./nagios-api -p 8080 -c /var/lib/nagios3/rw/nagios.cmd \
+        -s /var/cache/nagios3/status.dat
+
+TODO: document the API.
+
+Written by Mark Smith <mark@qq.is> and copyright by Bump Technologies, Inc.

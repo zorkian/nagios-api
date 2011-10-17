@@ -1,0 +1,89 @@
+#!/usr/bin/python
+
+'''nagios-cli -- interface for the Nagios REST API
+
+This is a brain-dead script.  It simply does some JSON encoding/decoding for
+easy interfacing with nagios-api.  This should be rewritten eventually to be
+a lot easier to use.
+
+Written by Mark Smith <mark@qq.is>.
+
+Copyright 2011 by Bump Technologies, Inc.
+
+'''
+
+import sys
+import urllib2
+from json import loads, dumps
+from optparse import OptionParser
+
+
+def main(argv):
+    '''Where the fun begins.'''
+
+    # parse out command line options
+    p = OptionParser()
+    p.add_option('-H', '--host', dest='host', default='localhost',
+        help='Host to connect to', metavar='HOST')
+    p.add_option('-p', '--port', dest='port', type='int', default=6315,
+        help='Port to listen on', metavar='PORT')
+    (opts, args) = p.parse_args(argv)
+
+    # require at least one arg
+    if len(args) <= 1:
+        print >>sys.stderr, 'Not enough arguments'
+        return 1
+
+    # the rest of the data is now in args, build the URL
+    verb = args[1]
+    objid = args[2] if len(args) >= 3 and args[2].isdigit() else ''
+    url = 'http://%s:%d/%s/%s' % (opts.host, opts.port, args[1], objid)
+
+    # now build the reqobj
+    obj = {}
+    for kv in args[3 if objid else 2:]:
+        if not '=' in kv:
+            print >>sys.stderr, 'Parameter "%s" does not conform to expected key=value format' % kv
+            return 1
+        key, value = kv.split('=', 1)
+        obj[key] = value
+
+    # set the method to POST if we recognize the verb or if there is a payload
+    method = 'POST' if len(obj) > 0 else 'GET'
+    if verb in ('cancel_downtime'):
+        method = 'POST'
+    payload = dumps(obj) if method == 'POST' else None
+
+    # construct the request object to send it out
+    try:
+        res = urllib2.urlopen(url, payload)
+    except urllib2.URLError:
+        print >>sys.stderr, 'Failed connecting to nagios-api server'
+        return 1
+    if res is None:
+        print >>sys.stderr, 'Failed requesting resource'
+        return 1
+
+    # probably a JSON response, get it
+    try:
+        resobj = loads(res.read())
+        res.close()
+    except ValueError:
+        print >>sys.stderr, 'Failed parsing server response'
+        return 1
+
+    # protocol failure check
+    if not resobj['success']:
+        print >>sys.stderr, 'Failure: %s' % resobj['content']
+        return 1
+
+    # these are simple responses, we can handle them here
+    if type(resobj['content']) is str:
+        print resobj['content']
+    else:
+        print dumps(resobj['content'])
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[0:]))
