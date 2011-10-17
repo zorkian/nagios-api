@@ -33,6 +33,58 @@ You must at least provide the status file options. If you don't provide
 the other options, then we will disable that functionality and error to
 clients who request it.
 
+Once your API server is up and running you can access it through the
+included nagios-cli script. Here are some examples:
+
+  nagios-cli state
+
+Dump a very large, raw JSON output. This is hard to read, so I recommend
+that you do this instead:
+
+  nagios-cli state | python -mjson.tool
+
+That should give you an output that shows all of the relevant
+information to construct a status display. Hosts, services, comments,
+downtimes, and state information for everything. You can manipulate this
+information with several commands:
+
+  nagios-cli schedule_downtime host=web01 duration=600
+
+This schedules a 10 minute downtime for the host web01. You can do the
+same with a service:
+
+  nagios-cli schedule_downtime host=web01 service=Apache duration=600 \
+             author=mark "comment=Some comment to make."
+
+The syntax is kind of hard if you want to put spaces in your comments,
+please note that this CLI script is extremely preliminary. ;)
+
+Cancelling downtime can be done the same:
+
+  nagios-cli cancel_downtime host=web01
+
+That removes any downtimes that are on the host. Note that you will need
+to also remove service downtimes separately. The return code will let
+you know how things went. Also note that *you can't cancel a downtime
+until Nagios has acknowledged it being created*!
+
+What does this mean? If you have a script that creates a downtime, then
+does some work and finally cancels the downtime -- if that work is
+too fast, we will not be able to cancel the downtime since it hasn't
+actually been created yet. Nagios is an old and slow system and we don't
+know the ID of the downtimes we create until it updates the status file
+-- which could be tens of seconds or longer.
+
+If the log file is enabled, you can get the last 1000 items in the
+Nagios log like this:
+
+  nagios-cli log
+
+For now that output is an unparsed list. In the future I want to
+transform this into a logical system that tells you what is happening
+in a way that is easy to use so we don't have to duplicate Nagios log
+parsing code in every project.
+
 
 OPTIONS
 -------
