@@ -33,6 +33,33 @@ You must at least provide the status file options. If you don't provide
 the other options, then we will disable that functionality and error to
 clients who request it.
 
+
+HTTP USAGE
+----------
+The server speaks JSON. You can either GET data from it or POST data to
+it and take an action. It's pretty straightforward, here's an idea of
+what you can do from the command line:
+
+  curl http://localhost:6315/state
+
+That calls the `state` method and returns the JSON result.
+
+  curl -d '{"host": "web01", "duration": 600}' \
+      http://localhost:6315/schedule_downtime
+
+This POSTs the given JSON object to the `schedule_downtime` method. You
+will note that all objects returned follow a predictable format:
+
+  {"content": <object>, "result": <bool>}
+
+The `result` field is always `true` or `false`, allowing you to
+determine at a glance if the command succeeded. The `content` field may
+be any valid JavaScript object: an int, string, null, bool, hash, list,
+etc etc. What is returned depends on the method being called.
+
+
+NAGIOS-CLI USAGE
+----------------
 Once your API server is up and running you can access it through the
 included nagios-cli script. Here are some examples:
 
