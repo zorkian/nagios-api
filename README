@@ -1,14 +1,70 @@
 nagios-api
+==========
+:doctype: manpage
 
-This is a simple REST interface to Nagios.  Run this on your Nagios host and
-then sit back and enjoy a much easier, more straightforward way to accomplish
-things with Nagios.
 
+NAME
+----
+nagios-api - presents a REST-like JSON interface to Nagios
+
+
+SYNOPSIS
+--------
+*nagios-api* ['OPTIONS']
+
+
+DESCRIPTION
+-----------
+This program provides a simple REST-like interface to Nagios. Run this
+on your Nagios host and then sit back and enjoy a much easier, more
+straightforward way to accomplish things with Nagios. You can use the
+bundled nagios-cli, but you may find it easier to write your own system
+for interfacing with the API.
+
+
+USAGE
+-----
 Usage is pretty easy:
 
-    ./nagios-api -p 8080 -c /var/lib/nagios3/rw/nagios.cmd \
-        -s /var/cache/nagios3/status.dat
+  nagios-api -p 8080 -c /var/lib/nagios3/rw/nagios.cmd \
+             -s /var/cache/nagios3/status.dat -l /var/log/nagios3/nagios.log
 
+You must at least provide the status file options. If you don't provide
+the other options, then we will disable that functionality and error to
+clients who request it.
+
+
+OPTIONS
+-------
+*-p, --port*='PORT'::
+    Listen on port 'PORT' for HTTP requests.
+
+*-c, --command-file*='FILE'::
+    Use 'FILE' to write commands to Nagios. This is where external
+    commands are sent. If your Nagios installation does not allow
+    external commands, do not set this option.
+
+*-s, --status-file*='FILE'::
+    Set 'FILE' to the status file where Nagios stores its status
+    information. This is where we learn about the state of the world and
+    is the only required parameter.
+
+*-l, --log-file*='FILE'::
+    Point 'FILE' to the location of Nagios's log file if you want to
+    allow people to subscribe to it.
+
+
+API
+---
 TODO: document the API.
 
-Written by Mark Smith <mark@qq.is> and copyright by Bump Technologies, Inc.
+
+AUTHOR
+------
+Written by Mark Smith <mark@qq.is> while under the employ of Bump
+Technologies, Inc.
+
+
+COPYING
+-------
+See the LICENSE file for licensing information.

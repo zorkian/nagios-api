@@ -1,13 +1,12 @@
 #!/usr/bin/python
 
-'''nagios-api
+'''nagios-api - a REST-like, JSON API for Nagios
 
-This provides a simple REST interface to Nagios3.  See the README for more
-information about this software.
+This provides a simple REST interface to Nagios3. See the README for
+more information about this software.
 
-Written by Mark Smith <mark@qq.is>.
-
-Copyright 2011 by Bump Technologies, Inc.
+Copyright 2011 by Bump Technologies, Inc and other authors and
+contributors. See the LICENSE file for full licensing information.
 
 '''
 
@@ -60,11 +59,12 @@ def json_response(req, msg):
 
 
 def http_state(req, objid, reqobj):
-    '''Get a host->service mapping and return the basic state.  This is the
-    method to use to have status scripts or web interfaces that contain basic
-    overview information.
+    '''Get a host->service mapping and return the basic state. This is
+    the method to use to have status scripts or web interfaces that
+    contain basic overview information.
 
-    This should return everything you need to show the status of the world.
+    This should return everything you need to show the status of the
+    world.
 
     '''
     global NAGIOS
@@ -74,9 +74,9 @@ def http_state(req, objid, reqobj):
 
 
 def http_log(req, objid, reqobj):
-    '''Return the recent Nagios log entries.  This is useful if you just want
-    to see what has happened recently.  See the subscribe method if you want
-    to be notified when new log lines are added.
+    '''Return the recent Nagios log entries. This is useful if you just
+    want to see what has happened recently. See the subscribe method if
+    you want to be notified when new log lines are added.
 
     '''
     global NLOG
@@ -86,9 +86,9 @@ def http_log(req, objid, reqobj):
 
 
 def http_schedule_downtime(req, objid, reqobj):
-    '''Given a service or host, schedule downtime for it.  The main mode for
-    this API is to schedule a hard downtime that starts now and ends after so
-    many seconds.
+    '''Given a service or host, schedule downtime for it. The main mode
+    for this API is to schedule a hard downtime that starts now and ends
+    after so many seconds.
 
     '''
     global NAGIOS
@@ -121,7 +121,7 @@ def http_schedule_downtime(req, objid, reqobj):
 
 
 def http_cancel_downtime(req, objid, reqobj):
-    '''Given a downtime_id in objid, cancel that downtime.  Alternately,
+    '''Given a downtime_id in objid, cancel that downtime. Alternately,
     this method will expect a host and/or service parameter and use that
     to cancel any matching downtimes.
 
@@ -217,8 +217,8 @@ def send_nagios_command(*args):
 
 
 def read_status(statusfile):
-    '''Monitor the Nagios status file and update our global data store with the
-    data as it changes.
+    '''Monitor the Nagios status file and update our global data store
+    with the data as it changes.
 
     '''
     global NAGIOS
@@ -232,9 +232,9 @@ def read_status(statusfile):
 
 
 def read_log(logfile):
-    '''This function reads the Nagios log file and parses events.  This allows
-    us to provide a pubsub style interface so people can get real-time updates
-    from the Nagios system.
+    '''This function reads the Nagios log file and parses events. This
+    allows us to provide a pubsub style interface so people can get
+    real-time updates from the Nagios system.
 
     '''
     global NLOG, NLOGLINES
@@ -253,7 +253,7 @@ def read_log(logfile):
 
 
 def main(argv):
-    '''A simple REST API for Nagios3..
+    '''A simple REST API for Nagios3.
 
     '''
     global LOG, CMDFILE

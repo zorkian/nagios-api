@@ -1,14 +1,13 @@
 #!/usr/bin/python
 
-'''nagios-cli -- interface for the Nagios REST API
+'''nagios-cli - simple CLI for the nagios-api server
 
-This is a brain-dead script.  It simply does some JSON encoding/decoding for
-easy interfacing with nagios-api.  This should be rewritten eventually to be
-a lot easier to use.
+This is a brain-dead script. It simply does some JSON encoding/decoding
+for easy interfacing with nagios-api. This should be rewritten
+eventually to be a lot easier to use...
 
-Written by Mark Smith <mark@qq.is>.
-
-Copyright 2011 by Bump Technologies, Inc.
+Copyright 2011 by Bump Technologies, Inc and other authors and
+contributors. See the LICENSE file for full licensing information.
 
 '''
 
