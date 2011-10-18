@@ -139,9 +139,9 @@ OPTIONS
     different service. This requires setting a header on the endpoint,
     which this option allows you to do.
 +
-    You can simply set this header to `*` and not worry about it
-    if you want to allow all access. For more information see the
-    http://www.w3.org/TR/cors/[CORS specification].
+You can simply set this header to `*` and not worry about it
+if you want to allow all access. For more information see the
+http://www.w3.org/TR/cors/[CORS specification].
 
 *-q, --quiet*::
     If present, we will only print warning/critical messages. Useful if
