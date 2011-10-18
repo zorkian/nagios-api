@@ -33,16 +33,20 @@ URL_REGEX = re.compile(r'^/(\w+)(?:/(\d+)?)?$')
 NAGIOS = None
 NLOG = []
 NLOGLINES = 0
+ALLOW_ORIGIN = None
 
 
 def _send_json(req, success, content):
     '''Internal JSON sender.
 
     '''
+    global ALLOW_ORIGIN
     headers = http.HttpHeaders()
     out = dumps({ 'success': success, 'content': content })
     headers.add('Content-Length', len(out))
     headers.add('Content-Type', 'application/json')
+    if ALLOW_ORIGIN is not None:
+        headers.add('Access-Control-Allow-Origin', ALLOW_ORIGIN)
     return http.http_response(req, 200, headers, out)
 
 
@@ -268,10 +272,12 @@ def main(argv):
     '''A simple REST API for Nagios3.
 
     '''
-    global LOG, CMDFILE, CMD_ENABLED, LOG_ENABLED
+    global LOG, CMDFILE, CMD_ENABLED, LOG_ENABLED, ALLOW_ORIGIN
     app = Application()
 
     parser = OptionParser(description='Give Nagios a REST API.')
+    parser.add_option('-o', '--allow-origin', dest='alloworigin', metavar='ORIGIN',
+            help='Access-Control-Allow-Origin header contents')
     parser.add_option('-s', '--status-file', dest='statusfile', metavar='FILE',
             default='/var/cache/nagios3/status.dat', help='The file that contains '
             'the Nagios status.')
@@ -300,6 +306,8 @@ def main(argv):
     if os.path.exists(options.commandfile):
         CMD_ENABLED = True
         CMDFILE = options.commandfile
+    if options.alloworigin:
+        ALLOW_ORIGIN = options.alloworigin
 
     info('Listening on port %d, starting to rock and roll!' % options.port)
     app.add_service(Service(http.HttpServer(http_handler), options.port))
