@@ -150,7 +150,87 @@ http://www.w3.org/TR/cors/[CORS specification].
 
 API
 ---
-TODO: document the API.
+This program currently supports only a subset of the Nagios API. More
+is being added as it is needed. If you need somethin that isn't here,
+please consider submitting a patch!
+
+This section is organized into methods and sorted alphabetically. Each
+method is specified as a URL and may include an integer component on the
+path. Most data is passed as JSON objects in the body of a POST.
+
+cancel_downtime
+~~~~~~~~~~~~~~~
+Very simply, this immediately lifts a downtime that is currently in
+effect on a host or service. If you know the `downtime_id`, you can
+specify that as a URL argument like this:
+
+  curl -d "{}" http://localhost:6315/cancel_downtime/15
+
+That would cancel the downtime with `downtime_id` of 15. Most of the
+time you will probably not have this information and so we allow you to
+cancel by host/service as well.
+
+*host*='STRING' [required]::
+    Which host to cancel downtime from.  This must be specified if you
+    are not using the `downtime_id` directly.
+
+*service*='STRING'::
+    Optional. If specified, cancel any downtimes on this service.
+
+*services_too*='BOOL'::
+    Optional. If true and you have not specified a `service` in
+    specific, then we will cancel all downtimes on this host and all of
+    the services it has.
+
+log
+~~~
+Simply returns the most recent 1000 items in the Nagios event log. These
+are currently unparsed. There is a plan to parse this in the future and
+return event objects.
+
+schedule_downtime
+~~~~~~~~~~~~~~~~~
+This general purpose method is used for creating fixed length downtimes.
+This method can be used on hosts and services. You are allowed to
+specify the author and comment to go with the downtime, too. The JSON
+parameters are:
+
+*host*='STRING' [required]::
+    Which host to schedule a downtime for.  This must be specified.
+
+*duration*='INTEGER' [required]::
+    How many seconds this downtime will last for. They begin immediately
+    and continue for `duration` seconds before ending.
+
+*service*='STRING'::
+    Optional. If specified, we will schedule a downtime for this service
+    on the above host. If not specified, then the downtime will be
+    scheduled for the host itself.
+
+*services_too*='BOOL'::
+    Optional. If true and you have not specified a `service` in
+    specific, then we will schedule a downtime for the host and all of
+    the services on that host. Potentially many downtimes are scheduled.
+
+*author*='STRING'::
+    Optional. The name of the author. This is useful in UIs if you want
+    to disambiguate who is doing what.
+
+*comment*='STRING'::
+    Optional. As above, useful in the UI.
+
+The result of this method is a text string that indicates whether or
+not the downtimes have been scheduled or if a different error occurred.
+We do not have the ability to get the `downtime_id` that is generated,
+unfortunately, as that would require waiting for Nagios to regenerate
+the status file.
+
+state
+~~~~~
+This method takes no parameters. It returns a large JSON object
+containing all of the active state from Nagios. Included are all hosts,
+services, downtimes, comments, and other things that may be in the
+global state object.
 
 
 AUTHOR
