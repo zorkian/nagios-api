@@ -97,10 +97,12 @@ def http_schedule_downtime(req, objid, reqobj):
 
     host = reqobj['host'] if 'host' in reqobj else None
     service = reqobj['service'] if 'service' in reqobj else None
-    author = reqobj['author'] if 'author' in reqobj else None
-    comment = reqobj['comment'] if 'comment' in reqobj else None
-    dur = reqobj['duration'] if 'duration' in reqobj else None
-    dur = int(dur) if dur.isdigit() else None
+    author = reqobj['author'] if 'author' in reqobj else 'nagios-api'
+    comment = reqobj['comment'] if 'comment' in reqobj else 'schedule downtime'
+    try:
+        dur = int(reqobj['duration']) if 'duration' in reqobj else 0
+    except ValueError:
+        dur = 0
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
