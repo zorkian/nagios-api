@@ -27,6 +27,8 @@ from nagios import Nagios
 
 LOG = None
 CMDFILE = None
+CMD_ENABLED = False
+LOG_ENABLED = False
 URL_REGEX = re.compile(r'^/(\w+)(?:/(\d+)?)?$')
 NAGIOS = None
 NLOG = []
@@ -79,9 +81,11 @@ def http_log(req, objid, reqobj):
     you want to be notified when new log lines are added.
 
     '''
-    global NLOG
+    global NLOG, LOG_ENABLED
     if objid is not None:
         return json_error(req, 'Unexpected object ID.')
+    if not LOG_ENABLED:
+        return json_error(req, 'Log file parsing is not enabled on nagios-api.')
     return json_response(req, NLOG)
 
 
@@ -91,7 +95,9 @@ def http_schedule_downtime(req, objid, reqobj):
     after so many seconds.
 
     '''
-    global NAGIOS
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
     if objid is not None:
         return json_error(req, 'Unexpected object ID.')
 
@@ -128,7 +134,9 @@ def http_cancel_downtime(req, objid, reqobj):
     to cancel any matching downtimes.
 
     '''
-    global NAGIOS
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
 
     def cancel_downtime(obj):
         if obj.service is not None:
@@ -207,7 +215,9 @@ def send_nagios_command(*args):
     '''Send a simple command to our local Nagios server.
 
     '''
-    global CMDFILE
+    global CMDFILE, CMD_ENABLED
+    if not CMD_ENABLED:
+        return False  # May not be enabled.
     if len(args) < 2:
         return False
     arg = '[%d] ' % int(time.time()) + ';'.join(str(j) for j in args)
@@ -258,7 +268,7 @@ def main(argv):
     '''A simple REST API for Nagios3.
 
     '''
-    global LOG, CMDFILE
+    global LOG, CMDFILE, CMD_ENABLED, LOG_ENABLED
     app = Application()
 
     parser = OptionParser(description='Give Nagios a REST API.')
@@ -279,8 +289,6 @@ def main(argv):
 
     if not os.path.isfile(options.statusfile):
         parser.error('Status file not found: %s' % options.statusfile)
-    if not os.path.exists(options.commandfile):
-        parser.error('Command file not found: %s' % options.commandfile)
     if options.port < 0 or options.port > 65535:
         parser.error('Port must be in the range 1..65535.')
 
@@ -289,12 +297,16 @@ def main(argv):
     else:
         LOG = glog.sublog('nagios-api', glog.info)
 
-    CMDFILE = options.commandfile
+    if os.path.exists(options.commandfile):
+        CMD_ENABLED = True
+        CMDFILE = options.commandfile
 
     info('Listening on port %d, starting to rock and roll!' % options.port)
     app.add_service(Service(http.HttpServer(http_handler), options.port))
     app.add_loop(Loop(read_status, options.statusfile), keep_alive=True)
-    app.add_loop(Loop(read_log, options.logfile), keep_alive=True)
+    if os.path.isfile(options.logfile):
+        LOG_ENABLED = True
+        app.add_loop(Loop(read_log, options.logfile), keep_alive=True)
     app.run()
     return 1
 
