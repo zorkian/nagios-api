@@ -232,6 +232,31 @@ containing all of the active state from Nagios. Included are all hosts,
 services, downtimes, comments, and other things that may be in the
 global state object.
 
+submit_result
+~~~~~~~~~~~~~
+If you are using passive service checks or you just want to submit a
+result for a check, you can use this method to submit your result to
+Nagios.
+
+*host*='STRING' [required]::
+    The host to submit a result for.  This is required.
+
+*service*='STRING'::
+    Optional. If specified, we will submit a result for this service on
+    the above host. If not specified, then the result will be submitted
+    for the host itself.
+
+*status*='INTEGER' [required]::
+    The status code to set this host/service check to. If you are
+    updating a host's status: 0 = OK, 1 = DOWN, 2 = UNREACHABLE. For
+    service checks, 0 = OK, 1 = WARNING, 2 = CRITICAL, 3 = UNKNOWN.
+
+*output*='STRING' [required]::
+    The plugin output to be displayed in the UI and stored.  This is a
+    single line of text, normally returned by checkers.
+
+The response indicates if we successfully wrote the command to the log.
+
 
 AUTHOR
 ------

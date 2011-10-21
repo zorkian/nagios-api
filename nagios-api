@@ -188,6 +188,51 @@ def http_cancel_downtime(req, objid, reqobj):
         return json_response(req, 'none found')
 
 
+def http_submit_result(req, objid, reqobj):
+    '''Submits a check result for a host or service. This is mostly used
+    for passive services where Nagios is not responsible for doing the
+    checks itself.
+
+    As with other APIs, you are required to supply a host parameter and
+    you may supply a service. The output parameter is an opaque string
+    that gets given to Nagios. Use the status parameter to specify an
+    integer return code.
+
+    Host status codes: 0 = UP, 1 = DOWN, 2 = UNREACHABLE.
+    Service status codes: 0 = OK, 1 = WARNING, 2 = CRITICAL, 3 = UNKNOWN.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Failed to find host or service to update.')
+
+    if 'status' not in reqobj:
+        return json_error(req, 'Required parameter "status" not found.')
+    if 'output' not in reqobj:
+        return json_error(req, 'Required parameter "output" not found.')
+
+    try:
+        status = int(reqobj['status'])
+    except ValueError:
+        return json_error(req, 'Invalid status provided.')
+
+    if obj.service is not None:
+        if not send_nagios_command('PROCESS_SERVICE_CHECK_RESULT', host,
+                                   service, status, reqobj['output']):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('PROCESS_HOST_CHECK_RESULT', host, status,
+                                   reqobj['output']):
+            return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'submitted')
+
+
 def http_handler(req):
     '''Handle an incoming HTTP request.
 
@@ -217,6 +262,7 @@ def http_handler(req):
         'POST': {
             'schedule_downtime': http_schedule_downtime,
             'cancel_downtime': http_cancel_downtime,
+            'submit_result': http_submit_result,
         }
     }
 
