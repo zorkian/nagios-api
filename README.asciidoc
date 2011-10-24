@@ -188,6 +188,12 @@ Simply returns the most recent 1000 items in the Nagios event log. These
 are currently unparsed. There is a plan to parse this in the future and
 return event objects.
 
+objects
+~~~~~~~
+Returns a dict with the key being hostnames and the values being a list
+of services defined for that host. Use this method to get the contents
+of the world -- i.e., all hosts and services.
+
 schedule_downtime
 ~~~~~~~~~~~~~~~~~
 This general purpose method is used for creating fixed length downtimes.

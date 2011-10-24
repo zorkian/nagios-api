@@ -79,6 +79,24 @@ def http_state(req, objid, reqobj):
     return json_response(req, NAGIOS.for_json())
 
 
+def http_objects(req, objid, reqobj):
+    '''Get a host->service mapping. Does not return any data about what
+    these objects are. This is to be used to efficiently get a list of
+    everything that exists in the world.
+
+    '''
+    global NAGIOS
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+    ret = {}
+    for host in NAGIOS.hosts:
+        ret[host] = []
+        if host in NAGIOS.services:
+            for svc in NAGIOS.services[host]:
+                ret[host].append(svc)
+    return json_response(req, ret)
+
+
 def http_log(req, objid, reqobj):
     '''Return the recent Nagios log entries. This is useful if you just
     want to see what has happened recently. See the subscribe method if
@@ -256,12 +274,13 @@ def http_handler(req):
     # Dispatch table goes here
     dispatch = {
         'GET': {
-            'state': http_state,
             'log': http_log,
+            'state': http_state,
+            'objects': http_objects,
         },
         'POST': {
-            'schedule_downtime': http_schedule_downtime,
             'cancel_downtime': http_cancel_downtime,
+            'schedule_downtime': http_schedule_downtime,
             'submit_result': http_submit_result,
         }
     }
