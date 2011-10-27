@@ -1,87 +1,411 @@
 #!/usr/bin/python
 
-'''nagios-cli - simple CLI for the nagios-api server
+'''usage: %prog <config> <command> [command-options]
 
-This is a brain-dead script. It simply does some JSON encoding/decoding
-for easy interfacing with nagios-api. This should be rewritten
-eventually to be a lot easier to use...
+This script uses the JSON Nagios API to issue commands to Nagios. The
+goal is to make your life easier. If it doesn't, please return it
+unharmed and let me know what went wrong and I'll make it better.
+
+Usage:
+
+    nagios-cli --host=nagios --port=6315 <command> [command-options]
+
+This is the prefix. I recommend you stash this in an alias so you don't
+have to type in the host/port every time. From now on in this page, I
+will assume that 'nagios-cli' will do the right thing and leave out the
+host/port arguments.
+
+This tool operates like git, svn, and other tools you may now -- you
+invoke it, tell it what command to run, and then the rest of the
+arguments vary depending on the command. Some tools don't take any
+options, some take a few required arguments and then some.
+
+Status Viewing
+
+    nagios-cli hosts
+
+    nagios-cli services
+
+Downtime Management
+
+    nagios-cli schedule-downtime <host> [service] <duration>
+        [--recursive|-r] [--author|-a=TEXT] [--comment|-c=TEXT]
+
+    nagios-cli cancel-downtime <host> [service] [--recursive|-r]
 
 Copyright 2011 by Bump Technologies, Inc and other authors and
 contributors. See the LICENSE file for full licensing information.
 
 '''
 
+import re
 import sys
 import urllib2
 from json import loads, dumps
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 
 
-def main(argv):
-    '''Where the fun begins.'''
+URL = None  # To the Nagios API "http://foo:6315"
+NAGIOS = {}  # Host => [ Service, Service, Service, ... ]
 
-    # parse out command line options
-    p = OptionParser()
-    p.add_option('-H', '--host', dest='host', default='localhost',
-        help='Host to connect to', metavar='HOST')
-    p.add_option('-p', '--port', dest='port', type='int', default=6315,
-        help='Port to listen on', metavar='PORT')
-    (opts, args) = p.parse_args(argv)
 
-    # require at least one arg
-    if len(args) <= 1:
-        print >>sys.stderr, 'Not enough arguments'
-        return 1
+def time_to_seconds(inp):
+    '''Possibly convert a time written like "2h" or "50m" into seconds.
 
-    # the rest of the data is now in args, build the URL
-    verb = args[1]
-    objid = args[2] if len(args) >= 3 and args[2].isdigit() else ''
-    url = 'http://%s:%d/%s/%s' % (opts.host, opts.port, args[1], objid)
+    '''
+    match = re.match(r'^(\d+)([wdhms])?$', inp)
+    if match is None:
+        return None
+    val, denom = match.groups()
+    if denom is None:
+        return int(val)
+    multiplier = {'w': 604800, 'd': 86400, 'h': 3600, 'm': 60, 's': 1}[denom]
+    return int(val) * multiplier
 
-    # now build the reqobj
+
+def consume_host_service(args):
+    '''Given a list of arguments, attempt to consume a host and service
+    off of the front and return a list containing host=X service=X args
+    that you can send to the API.
+
+    '''
+    global NAGIOS
+    if args is None or len(args) <= 0:
+        return None
+    if args[0] not in NAGIOS:
+        return None
+    host = args[0]
+    selargs = ['host=%s' % host]
+    del args[0]
+
+    if len(args) > 0 and args[0] in NAGIOS[host]:
+        selargs += ['service=%s' % args[0]]
+        del args[0]
+    return selargs
+
+
+def api(args):
+    '''Send a call out to the API. Returns the response object (dict) or
+    an integer exit code on failure.
+
+    '''
+    global URL, NAGIOS
+
+    # The rest of the data is now in args, build the URL
+    verb = args[0]
+    objid = args[1] if len(args) >= 2 and args[1].isdigit() else ''
+    url = '%s/%s/%s' % (URL, verb, objid)
+
+    # Now build the reqobj
     obj = {}
-    for kv in args[3 if objid else 2:]:
+    for kv in args[2 if objid else 1:]:
         if not '=' in kv:
-            print >>sys.stderr, 'Parameter "%s" does not conform to expected key=value format' % kv
-            return 1
+            return critical('Parameter "%s" does not conform to expected key=value format' % kv)
         key, value = kv.split('=', 1)
         obj[key] = value
 
-    # set the method to POST if we recognize the verb or if there is a payload
+    # Set the method to POST if we recognize the verb or if there is a payload
     method = 'POST' if len(obj) > 0 else 'GET'
     if verb in ('cancel_downtime'):
         method = 'POST'
     payload = dumps(obj) if method == 'POST' else None
 
-    # construct the request object to send it out
+    # Construct the request object to send it out
     try:
         res = urllib2.urlopen(url, payload)
     except urllib2.URLError:
-        print >>sys.stderr, 'Failed connecting to nagios-api server'
-        return 1
+        return critical('Failed connecting to nagios-api server')
     if res is None:
-        print >>sys.stderr, 'Failed requesting resource'
-        return 1
+        return critical('Failed requesting resource')
 
-    # probably a JSON response, get it
+    # Probably a JSON response, get it
     try:
         resobj = loads(res.read())
         res.close()
     except ValueError:
-        print >>sys.stderr, 'Failed parsing server response'
-        return 1
+        return critical('Failed parsing server response')
+    return resobj
 
-    # protocol failure check
+
+def do_schedule_downtime(cmd, args, opts):
+    '''Create a scheduled downtime for a host or service. Usage:
+
+        %prog schedule-downtime <host> [service] <duration> [opts]
+
+    host must be a hostname that Nagios knows about. If specified,
+    service is a service that exists on that host. This combination of
+    host and optional service indicates what you want the downtime to be
+    scheduled on.
+
+    The duration must be of the format like "2h". You can use w, d, h,
+    m, or s as units. Seconds are assumed if you don't specify the units.
+
+    Available options:
+
+        --recursive       Schedule downtime for all services on this host.
+                          You must not specify a specific service.
+
+        --author=NAME     Specify an author to record this downtime for.
+
+        --comment=TEXT    Leave descriptive text about the downtime.
+
+    Example:
+
+        %prog schedule-downtime web01 2h
+            # schedule two hours of downtime for web01
+
+        %prog schedule-downtime web01 "PING Check" 1w
+            # schedule one week of downtime for PING Check on web01
+
+        %prog schedule-downtime web03 1d --recursive
+            # schedule one day of downtime for web03 and ALL services on it
+
+    NOTE: This command schedules a fixed downtime that starts
+    immediately and lasts for the specified duration.
+
+    '''
+    p = OptionParser(usage=trim(do_schedule_downtime.__doc__))
+    p.disable_interspersed_args()
+    p.add_option('-a', '--author', dest='author', metavar='NAME',
+        help='Author to blame for this downtime')
+    p.add_option('-c', '--comment', dest='comment', metavar='TEXT',
+        help='Explanatory comment to leave on the downtime')
+    p.add_option('-r', '--recursive', dest='recursive', action='store_true',
+        help='Schedule for all services on the given host')
+    p.set_defaults(recursive=False, author=None, comment=None)
+
+    selargs = consume_host_service(args)
+    if selargs is None:
+        p.error('Failed to locate host/service to schedule downtime for')
+    if len(args) <= 0:
+        p.error('Must specify a duration in a format like "2h"')
+    secs = time_to_seconds(args[0])
+    if secs is None:
+        p.error('Invalid duration, must be in a format like "2h"')
+    selargs += ['duration=%d' % secs]
+
+    (options, args) = p.parse_args(opts)
+    if options.recursive:
+        selargs += ['services_too=true']
+    if options.author is not None:
+        selargs += ['author=%s' % options.author]
+    if options.comment is not None:
+        selargs += ['comment=%s' % options.comment]
+
+    res = api(['schedule_downtime'] + selargs)
+    if isinstance(res, int):
+        return res
+    if not isinstance(res, dict):
+        return critical('API returned unknown object type')
+    if not res['success']:
+        return critical('Failed: %s' % res['content'])
+    return 0
+
+
+def do_cancel_downtime(cmd, args, opts):
+    '''Cancel a scheduled downtime for a host or service. Usage:
+
+        %prog cancel-downtime <host> [service] [opts]
+
+    host must be a hostname that Nagios knows about. If specified,
+    service is a service that exists on that host. This combination of
+    host and optional service indicates what you want the downtime to be
+    cancelled from.
+
+    Available options:
+
+        --recursive       Cancel downtime for all services on this host.
+                          You must not specify a specific service.
+
+    Example:
+
+        %prog cancel-downtime web01
+            # cancel downtime for web01
+
+        %prog cancel-downtime web01 "PING Check"
+            # cancel downtime for PING Check on web01
+
+        %prog cancel-downtime web03 --recursive
+            # cancel downtime for web03 and ALL services on it
+
+    NOTE: If you have just scheduled the downtime through the API, note
+    that it may take a little while before you can cancel it. Nagios
+    is not instant and it may not write out the status file (with the
+    downtime id) for some time.
+
+    '''
+    p = OptionParser(usage=trim(do_cancel_downtime.__doc__))
+    p.disable_interspersed_args()
+    p.add_option('-r', '--recursive', dest='recursive', action='store_true',
+        help='Cancel for all services on the given host')
+    p.set_defaults(recursive=False, author=None, comment=None)
+
+    selargs = consume_host_service(args)
+    if selargs is None:
+        p.error('Failed to locate host/service to cancel downtime for')
+
+    (options, args) = p.parse_args(opts)
+    if options.recursive:
+        selargs += ['services_too=true']
+
+    res = api(['cancel_downtime'] + selargs)
+    if isinstance(res, int):
+        return res
+    if not isinstance(res, dict):
+        return critical('API returned unknown object type')
+    if not res['success']:
+        return critical('Failed: %s' % res['content'])
+    return 0
+
+
+def do_hosts(cmd, args, opts):
+    '''Return a plain list of all hosts.
+
+    '''
+    global NAGIOS
+    for host in NAGIOS:
+        print host
+    return 0
+
+
+def do_services(cmd, args, opts):
+    '''For a given host, return all services. Usage:
+
+        %prog services <host>
+
+    Specify the host you wish to view the services of.
+    '''
+    global NAGIOS
+    p = OptionParser(usage=trim(do_services.__doc__))
+    if len(args) <= 0 or args[0] not in NAGIOS:
+        p.error('First argument must be a valid hostname')
+    for svc in NAGIOS[args[0]]:
+        print svc
+    return 0
+
+
+def critical(msg, retval=1):
+    '''Print a message to STDERR and return a failure code.
+
+    '''
+    print >>sys.stderr, msg
+    return retval
+
+
+def do_raw(args):
+    '''Allows the user to interact with the API directly and use this
+    CLI as a JSON generator. Please know what you're doing.
+
+    '''
+    resobj = api(args)
+    if isinstance(resobj, int):
+        return resobj
+    if not isinstance(resobj, dict):
+        return critical('API returned unknown object type')
+
+    # Protocol failure check
     if not resobj['success']:
-        print >>sys.stderr, 'Failure: %s' % resobj['content']
-        return 1
+        return critical('Failure: %s' % resobj['content'])
 
-    # these are simple responses, we can handle them here
+    # These are simple responses, we can handle them here
     if type(resobj['content']) is str:
         print resobj['content']
     else:
         print dumps(resobj['content'])
     return 0
+
+
+def trim(docstring):
+    '''This is taken from PEP 257 for docstring usage. I'm duplicating
+    it here so I can use it to preparse docstrings before sending them
+    to OptionParser. Otherwise, I can either not indent my docstrings
+    (in violation of the PEP) or I can have the usage outputs be
+    indented.
+
+    '''
+    if not docstring:
+        return ''
+    # Convert tabs to spaces (following the normal Python rules)
+    # and split into a list of lines:
+    lines = docstring.expandtabs().splitlines()
+    # Determine minimum indentation (first line doesn't count):
+    indent = sys.maxint
+    for line in lines[1:]:
+        stripped = line.lstrip()
+        if stripped:
+            indent = min(indent, len(line) - len(stripped))
+    # Remove indentation (first line is special):
+    trimmed = [lines[0].strip()]
+    if indent < sys.maxint:
+        for line in lines[1:]:
+            trimmed.append(line[indent:].rstrip())
+    # Strip off trailing and leading blank lines:
+    while trimmed and not trimmed[-1]:
+        trimmed.pop()
+    while trimmed and not trimmed[0]:
+        trimmed.pop(0)
+    # Return a single string:
+    return '\n'.join(trimmed)
+
+
+def main(argv):
+    '''Where the fun begins. Actually do something useful.
+
+    '''
+    global URL, NAGIOS
+
+    # Parse out command line options
+    p = OptionParser(usage=trim(__doc__))
+    p.disable_interspersed_args()
+    p.add_option('-H', '--host', dest='host', default='localhost',
+        help='Host to connect to', metavar='HOST')
+    p.add_option('-p', '--port', dest='port', type='int', default=6315,
+        help='Port to listen on', metavar='PORT')
+    p.add_option('--raw', dest='raw', action='store_true',
+        help='Enable raw mode for the CLI')
+    (opts, args) = p.parse_args(argv[1:])
+    URL = 'http://%s:%d' % (opts.host, opts.port)
+
+    # If no more arguments, show usage
+    if len(args) <= 0:
+        p.error('No command specified')
+
+    # Now load the state of the world (cache this locally?)
+    temp = api(['objects'])
+    if isinstance(temp, dict):
+        if not temp['success']:
+            return critical('Failed to load objects from nagios-api')
+        NAGIOS = temp['content']
+    else:
+        return temp
+
+    # If we're in raw mode, bail out for that now
+    if opts.raw:
+        return do_raw(args)
+
+    # args will now contain the subcommand, some positional arguments,
+    # and then the dashed options. Split them.
+    command, posargs, otherargs = args[0], [], []
+    for arg in args[1:]:
+        if len(otherargs) > 0:
+            otherargs.append(arg)
+            continue
+        if arg[0] == '-':
+            otherargs.append(arg)
+        else:
+            posargs.append(arg)
+
+    # Dispatch table and then dispatch
+    dispatch = {
+        'schedule-downtime': do_schedule_downtime,
+        'cancel-downtime': do_cancel_downtime,
+        'hosts': do_hosts,
+        'services': do_services,
+    }
+    for cmd in dispatch:
+        if re.match(r'^' + command, cmd):
+            return dispatch[cmd](command, posargs, otherargs)
+    p.error('Command not found, see the usage')
 
 
 if __name__ == '__main__':
