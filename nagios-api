@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python26
 
 '''nagios-api - a REST-like, JSON API for Nagios
 
@@ -16,7 +16,7 @@ import os
 import re
 import sys
 import time
-import pprint
+import types
 from optparse import OptionParser
 from diesel import Application, Loop, Service, log as glog, sleep
 from diesel.util.lock import synchronized
@@ -29,7 +29,7 @@ LOG = None
 CMDFILE = None
 CMD_ENABLED = False
 LOG_ENABLED = False
-URL_REGEX = re.compile(r'^/(\w+)(?:/(\d+)?)?$')
+URL_REGEX = re.compile(r'^/(\w+)(?:/([\w\d\.]+)?)?$')
 NAGIOS = None
 NLOG = []
 NLOGLINES = 0
@@ -94,6 +94,48 @@ def http_objects(req, objid, reqobj):
         if host in NAGIOS.services:
             for svc in NAGIOS.services[host]:
                 ret[host].append(svc)
+    return json_response(req, ret)
+
+
+def http_host(req, objid, reqobj):
+    '''Get a view of a single host.
+    Shows all of the variables for the host object.
+    '''
+    global NAGIOS
+    if not objid:
+        return json_error(req, 'No hostname provided.')
+    elif objid not in NAGIOS.hosts.keys():
+        return json_error(req, 'Unknown hostname.')
+    ret = {}
+    host_keys = [ x for x in dir(NAGIOS.hosts[objid]) if not x.startswith('__') ]
+    for host_key in host_keys:
+        value = getattr(NAGIOS.hosts[objid], host_key)
+        if type(value) == types.StringType:
+            ret[host_key] = value 
+    if objid in NAGIOS.services:
+        ret['services'] = []
+        for svc in NAGIOS.services[objid]:
+            ret['services'].append(svc)
+    return json_response(req, ret)
+
+
+def http_service(req, objid, reqobj):
+    '''Get a view of a single service on one host.
+    Shows all of the variables for the host object.
+    '''
+    global NAGIOS
+    if not objid:
+        return json_error(req, 'No hostname provided.')
+    elif objid not in NAGIOS.services.keys():
+        return json_error(req, 'Unknown hostname.')
+    ret = {}
+    for service in NAGIOS.services[objid]:
+        ret[service] = {}
+        service_keys = [ x for x in dir(NAGIOS.services[objid][service]) if not x.startswith('__') ]
+        for service_key in service_keys:
+            value = getattr(NAGIOS.services[objid][service], service_key)
+            if type(value) == types.StringType:
+                ret[service][service_key] = value
     return json_response(req, ret)
 
 
@@ -261,7 +303,12 @@ def http_handler(req):
     if res is None:
         return json_error(req, 'Invalid request URI')
     verb, objid = res.group(1), res.group(2)
-    objid = int(objid) if objid else None
+    try:
+        objid = int(objid)
+    except ValueError:
+        pass
+    except TypeError:
+        objid = None
 
     # If it's a POST, try to extract a JSON object from the body.
     try:
@@ -277,6 +324,8 @@ def http_handler(req):
             'log': http_log,
             'state': http_state,
             'objects': http_objects,
+            'host': http_host,
+            'service': http_service,
         },
         'POST': {
             'cancel_downtime': http_cancel_downtime,
