@@ -1,4 +1,4 @@
-#!/usr/bin/python26
+#!/usr/bin/python
 
 '''nagios-api - a REST-like, JSON API for Nagios
 
