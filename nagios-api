@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 '''nagios-api - a REST-like, JSON API for Nagios
 
@@ -29,7 +29,7 @@ LOG = None
 CMDFILE = None
 CMD_ENABLED = False
 LOG_ENABLED = False
-URL_REGEX = re.compile(r'^/(\w+)(?:/([\w\d\.]+)?)?$')
+URL_REGEX = re.compile(r'^/(\w+)(?:/([\w\d\.\-]+)?)?$')
 NAGIOS = None
 NLOG = []
 NLOGLINES = 0
@@ -42,7 +42,7 @@ def _send_json(req, success, content):
     '''
     global ALLOW_ORIGIN
     headers = http.HttpHeaders()
-    out = dumps({ 'success': success, 'content': content })
+    out = dumps({ 'success': success, 'content': content }, ensure_ascii=False)
     headers.add('Content-Length', len(out))
     headers.add('Content-Type', 'application/json')
     if ALLOW_ORIGIN is not None:
@@ -293,6 +293,280 @@ def http_submit_result(req, objid, reqobj):
     return json_response(req, 'submitted')
 
 
+def http_acknowledge_problem(req, objid, reqobj):
+    '''Submits an acknowledgement of a host or service problem. This is used
+    when you have an open issue, that you want to acknowledge to prevent it
+    from sending further alerts.
+
+    You are required to send at minimum a host parameter, and you can also
+    supply an optional service parameter. If no service is supplied, the
+    host will be acknowledged, and if the service parameter is supplied
+    only the specific service will be acknowledged.
+
+    Additionally, you are required to supply a comment parameter as well. This
+    is a text string that will be used to identify the reason for the
+    acknowledgement.
+
+    The following options are also available, but optional.
+
+    sticky (0/1): If set to 1, the acknowledgement will remain until the service
+    or host enters an OK state. If set to 0, it will clear the acknowledgement on
+    the first state change, ex. CRITICAL->WARNING. Defaults to 1 (on).
+
+    notify (0/1): If set to 0, no notification will be sent to the configure
+    contacts for the host or service. Defaults to 1 (on).
+
+    persistent (0/1): If set to 1, the comment will remain even after the service
+    or host problem has been resolved. Defaults to 0 (off).
+
+    author (string): This is the name displayed as the creator of the
+    acknowledgement. This will default to 'nagios-api'.
+    
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+    comment = reqobj['comment'] if 'comment' in reqobj else None
+    sticky = reqobj['sticky'] if 'sticky' in reqobj else 1
+    notify = reqobj['notify'] if 'notify' in reqobj else 1
+    persistent = reqobj['persistent'] if 'persistent' in reqobj else 0
+    author = reqobj['author'] if 'author' in reqobj else 'nagios-api'
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Failed to find host or service to update.')
+
+    if not 'comment':
+        return json_error(req, 'Required parameter "comment" not found.')
+
+    try:
+        sticky = int(sticky)
+        notify = int(notify)
+        persistent = int(persistent)
+    except ValueError:
+        return json_error(req, 'Invalid value provided for one or more of sticky, notify or persistent')
+
+    if obj.service is not None:
+        if not send_nagios_command('ACKNOWLEDGE_SVC_PROBLEM', host, service, 
+                                    sticky, notify, persistent, author, comment):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('ACKNOWLEDGE_HOST_PROBLEM', host, sticky,
+                                    notify, persistent, author, comment):
+            return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'submitted')
+
+
+def http_remove_acknowledgement(req, objid, reqobj):
+    '''Removes an acknowledgement from a host or service.
+
+    You are required to send at minimum a host parameter, and you can also
+    supply an optional service parameter. If no service is supplied, the
+    host will be acknowledged, and if the service parameter is supplied
+    only the specific service will be acknowledged.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Failed to find host or service to update.')
+
+    if obj.service is not None:
+        if not send_nagios_command('REMOVE_SVC_ACKNOWLEDGEMENT', host, service):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('REMOVE_HOST_ACKNOWLEDGEMENT', host):
+            return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'submitted')
+
+
+def http_add_comment(req, objid, reqobj):
+    '''Adds a comment to a host or service.
+
+    You are required to send at minimum a host and comment parameter,
+    and you can also supply an optional service parameter. If the service
+    parameter is supplied, the comment will be added to the specific service
+    and if its omitted, the comment will be added to the host
+
+    The following options are also available, but optional.
+
+    persistent (0/1): If set to 1, the comment will remain until manually
+    deleted, if set to 0, it will automatically be purged at the next
+    restart of the Nagios process. Defaults to 0 (off)
+    or host problem has been resolved. Defaults to 0 (off).
+
+    author (string): This is the name displayed as the creator of the
+    comment. This will default to 'nagios-api'.
+    
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+    comment = reqobj['comment'] if 'comment' in reqobj else None
+    persistent = reqobj['persistent'] if 'persistent' in reqobj else 0
+    author = reqobj['author'] if 'author' in reqobj else 'nagios-api'
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Failed to find host or service to update.')
+
+    if not comment:
+        return json_error(req, 'Required parameter "comment" not found.')
+
+    try:
+        persistent = int(persistent)
+    except ValueError:
+        return json_error(req, 'Invalid value provided for persistent')
+
+    if obj.service is not None:
+        if not send_nagios_command('ADD_SVC_COMMENT', host, service, 
+                                    persistent, author, comment):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('ADD_HOST_COMMENT', host,
+                                    persistent, author, comment):
+            return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'submitted')
+
+
+def http_delete_comment(req, objid, reqobj):
+    '''Deletes one or all comments for a host or service.
+
+    You are required to supply atleast the host parameter along
+    with comment_id, detailing the comment to delete. You can also
+    supply the service parameter to delete comments from a specific
+    service.
+
+    If comment_id is set to -1, all comments for the host or service
+    will be deleted.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+    comment_id = reqobj['comment_id'] if 'comment_id' in reqobj else None
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Failed to find host or service to update.')
+
+    if not 'comment_id':
+        return json_error(req, 'Required parameter "comment" not found.')
+
+    try:
+        comment_id = int(comment_id)
+    except ValueError:
+        return json_error(req, 'Invalid value provided for comment_id')
+
+    if obj.service is not None:
+        if comment_id == -1:
+            if not send_nagios_command('DEL_ALL_SVC_COMMENTS', host, service):
+                return json_error(req, 'Failed sending command to Nagios.')
+        else:
+            if not send_nagios_command('DEL_SVC_COMMENT', comment_id):
+                return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if comment_id == -1:
+            if not send_nagios_command('DEL_ALL_HOST_COMMENTS', host):
+                return json_error(req, 'Failed sending command to Nagios.')
+        else:
+            if not send_nagios_command('DEL_HOST_COMMENT', comment_id):
+                return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'submitted')
+
+
+def http_schedule_check(req, objid, reqobj):
+    '''Schedules a check for a host or service.
+
+    Requires the host parameter to be sent, and also accepts
+    a service parameter. If the service parameter is set to
+    *, all check will be scheduled for all services on the host.
+
+    Scheduling a non-forced check, does not mean the check will
+    occur. If active checks have been disabled either on a
+    program-wide or service level, or the services are already
+    scheduled to be checked sooner than your requested time,
+    the check will not be performed, unless forced mode is
+    enabled (see below).
+
+    The following optional parameters are also available:
+
+    check_time (int): The time at which to schedule the check,
+    in time_t (UNIX timestamp) format. Defaults to current time.
+
+    forced (0/1): If set to 1, the scheduled check will be
+    marked as forced, meaning it will be performed, even if
+    there has been other checks run on the host or service
+    in the mean time. Defaults to 0 (off)
+
+    all_services (0/1): If set to 1, all services for the
+    specified host will be checked. Enabling this option, will
+    cause the service parameter to be ignored, if supplied.
+    Defaults to 0 (off)
+    '''
+    from time import time
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+    check_time = reqobj['check_time'] if 'check_time' in reqobj else time()
+    forced = reqobj['forced'] if 'forced' in reqobj else 0
+    all_services = reqobj['all_services'] if 'all_services' in reqobj else 0
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Failed to find host or service to update.')
+
+    try:
+        check_time = int(check_time)
+        forced = int(forced)
+        all_services = int(all_services)
+    except ValueError:
+        return json_error(req, 'Invalid value provided for check_time, all_services or forced')
+
+    if obj.service is not None:
+        if forced:
+            if not send_nagios_command('SCHEDULE_FORCED_SVC_CHECK', host, service, check_time):
+                return json_error(req, 'Failed sending command to Nagios.')
+        else:
+            if not send_nagios_command('SCHEDULE_SVC_CHECK', host, service, check_time):
+                return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if forced:
+            if not send_nagios_command('SCHEDULE_FORCED_HOST_CHECK', host, check_time):
+                return json_error(req, 'Failed sending command to Nagios.')
+        else:
+            if not send_nagios_command('SCHEDULE_HOST_CHECK', host, check_time):
+                return json_error(req, 'Failed sending command to Nagios.')
+
+        if all_services:
+            if forced:
+                if not send_nagios_command('SCHEDULE_FORCED_HOST_SVC_CHECKS', host, check_time):
+                    return json_error(req, 'Failed sending command to Nagios.')
+            else:
+                if not send_nagios_command('SCHEDULE_HOST_SVC_CHECKS', host, check_time):
+                    return json_error(req, 'Failed sending command to Nagios.')
+
+    return json_response(req, 'submitted')
+
+
 def http_handler(req):
     '''Handle an incoming HTTP request.
 
@@ -331,6 +605,11 @@ def http_handler(req):
             'cancel_downtime': http_cancel_downtime,
             'schedule_downtime': http_schedule_downtime,
             'submit_result': http_submit_result,
+            'acknowledge_problem': http_acknowledge_problem,
+            'remove_acknowledgement': http_remove_acknowledgement,
+            'add_comment': http_add_comment,
+            'delete_comment': http_delete_comment,
+            'schedule_check': http_schedule_check,
         }
     }
 
@@ -350,7 +629,8 @@ def send_nagios_command(*args):
         return False  # May not be enabled.
     if len(args) < 2:
         return False
-    arg = '[%d] ' % int(time.time()) + ';'.join(str(j) for j in args)
+    arg = '[%d] ' % int(time.time()) + ';'.join(unicode(j) for j in args)
+    arg = arg.encode('latin1')
     with synchronized():
         info('Sending command: %s' % arg)
         with open(CMDFILE, 'w') as pipe:
