@@ -17,13 +17,13 @@ import re
 import sys
 import time
 import types
+import atexit
 from optparse import OptionParser
 from diesel import Application, Loop, Service, log as glog, sleep
 from diesel.util.lock import synchronized
 from diesel.protocols import http
 from json import loads, dumps
 from nagios import Nagios
-
 
 LOG = None
 CMDFILE = None
@@ -34,6 +34,7 @@ NAGIOS = None
 NLOG = []
 NLOGLINES = 0
 ALLOW_ORIGIN = None
+PIDFILE = "/var/run/nagios-api.pid"
 
 
 def _send_json(req, success, content):
@@ -751,16 +752,19 @@ def warn(msg):
     LOG.warn(msg)
     return 0
 
+def _exitfunc():
+    print "Exiting. Cleaning up PID."
+    os.unlink(PIDFILE)
 
 if __name__ == '__main__':
     pid = str(os.getpid())
-    pidfile = "/var/run/nagios-api.pid"
 
-    if os.path.isfile(pidfile):
-        print "%s already exists, exiting" % pidfile
+    if os.path.isfile(PIDFILE):
+        print "%s already exists, exiting" % PIDFILE
         sys.exit()
     else:
-        file(pidfile, 'w').write(pid)
+        file(PIDFILE, 'w').write(pid)
+
+    atexit.register(_exitfunc)
 
     sys.exit(main(sys.argv))
-    os.unlink(pidfile)
