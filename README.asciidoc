@@ -13,6 +13,11 @@ SYNOPSIS
 *nagios-api* ['OPTIONS']
 
 
+DEPENDENCIES
+------------
+Dependencies include: diesel, greenlet and python-openssl bindings
+
+
 DESCRIPTION
 -----------
 This program provides a simple REST-like interface to Nagios. Run this
