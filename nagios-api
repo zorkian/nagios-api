@@ -753,4 +753,14 @@ def warn(msg):
 
 
 if __name__ == '__main__':
+    pid = str(os.getpid())
+    pidfile = "/tmp/nagios-api.pid"
+
+    if os.path.isfile(pidfile):
+        print "%s already exists, exiting" % pidfile
+        sys.exit()
+    else:
+        file(pidfile, 'w').write(pid)
+
     sys.exit(main(sys.argv))
+    os.unlink(pidfile)
