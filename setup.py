@@ -8,5 +8,9 @@ setup(name='nagios-api',
       author_email='mark@qq.is',
       url='https://github.com/xb95/nagios-api',
       packages=['nagios'],
-      scripts=['nagios-cli', 'nagios-api']
+      scripts=['nagios-cli', 'nagios-api'],
+      install_requires=[
+        'diesel==2.1.1',
+        'greenlet==0.3.4'
+      ]
      )
