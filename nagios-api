@@ -754,7 +754,7 @@ def warn(msg):
 
 if __name__ == '__main__':
     pid = str(os.getpid())
-    pidfile = "/tmp/nagios-api.pid"
+    pidfile = "/var/run/nagios-api.pid"
 
     if os.path.isfile(pidfile):
         print "%s already exists, exiting" % pidfile
