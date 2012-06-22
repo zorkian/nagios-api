@@ -694,6 +694,8 @@ def main(argv):
     parser.add_option('-l', '--log-file', dest='logfile', metavar='FILE',
             default='/var/log/nagios3/nagios.log', help='The file Nagios writes '
             'log events to.')
+    parser.add_option('-b', '--bind', dest='bind_addr', metavar='ADDR',
+            default='', help='The address to listen for requests on.')
     parser.add_option('-p', '--port', dest='port', metavar='PORT', type='int',
             default=6315, help='The port to listen for requests on.')
     parser.add_option('-q', '--quiet', dest='quiet', action='store_true',
@@ -717,7 +719,8 @@ def main(argv):
         ALLOW_ORIGIN = options.alloworigin
 
     info('Listening on port %d, starting to rock and roll!' % options.port)
-    app.add_service(Service(http.HttpServer(http_handler), options.port))
+    app.add_service(Service(http.HttpServer(http_handler), options.port,
+            options.bind_addr))
     app.add_loop(Loop(read_status, options.statusfile), keep_alive=True)
     if os.path.isfile(options.logfile):
         LOG_ENABLED = True
