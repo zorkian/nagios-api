@@ -80,6 +80,9 @@ OPTIONS
 *-p, --port*='PORT'::
     Listen on port 'PORT' for HTTP requests.
 
+*-b, --bind*='ADDR'::
+    Bind to ADDR for HTTP requests (defaults to all interfaces).
+
 *-c, --command-file*='FILE'::
     Use 'FILE' to write commands to Nagios. This is where external
     commands are sent. If your Nagios installation does not allow
