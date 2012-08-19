@@ -44,7 +44,14 @@ class Nagios:
                             chunks = dat.split(';', 1)
                             if chunks and len(chunks) > 0 and '=' in chunks[0]:
                                 (c_key, c_val) = chunks[0].split('=', 1)
-                                performance_data[c_key] = c_val
+                                # convert to int or float if possible
+                                try:
+                                    n_val = float(c_val)
+                                    if (n_val == int(n_val)):
+                                        n_val = int(n_val)
+                                except ValueError:
+                                    n_val = c_val
+                                performance_data[c_key] = n_val
                         val = performance_data
                     cur[key] = val
             if cur is not None:
