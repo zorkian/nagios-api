@@ -36,6 +36,23 @@ class Nagios:
                     cur = {'type': line.split(' ', 1)[0]}
                 elif '=' in line:
                     key, val = line.split('=', 1)
+                    if key == "performance_data":
+                        # performance_data is special
+                        performance_data = {}
+                        split = val.split(' ')
+                        for dat in split:
+                            chunks = dat.split(';', 1)
+                            if chunks and len(chunks) > 0 and '=' in chunks[0]:
+                                (c_key, c_val) = chunks[0].split('=', 1)
+                                # convert to int or float if possible
+                                try:
+                                    n_val = float(c_val)
+                                    if (n_val == int(n_val)):
+                                        n_val = int(n_val)
+                                except ValueError:
+                                    n_val = c_val
+                                performance_data[c_key] = n_val
+                        val = performance_data
                     cur[key] = val
             if cur is not None:
                 yield cur
@@ -125,7 +142,7 @@ class HostOrService(NagiosObject):
         self.essential_keys = ['current_state', 'plugin_output',
             'notifications_enabled', 'last_check', 'last_notification',
             'active_checks_enabled', 'problem_has_been_acknowledged',
-            'last_hard_state', 'scheduled_downtime_depth']
+            'last_hard_state', 'scheduled_downtime_depth', 'performance_data']
 
     def attach_downtime(self, dt):
         '''Given a Downtime object, store a record to it for lookup later.'''
