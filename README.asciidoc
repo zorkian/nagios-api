@@ -123,6 +123,15 @@ This section is organized into methods and sorted alphabetically. Each
 method is specified as a URL and may include an integer component on the
 path. Most data is passed as JSON objects in the body of a POST.
 
+enable_notifications
+~~~~~~~~~~~~~~~~~~~~
+Undocumented. Works like cancel_downtime, except no ID. Submit a host,
+and either a service name, or specify services_too to enable all.
+
+disable_notifications
+~~~~~~~~~~~~~~~~~~~~~
+As above for enable.
+
 cancel_downtime
 ~~~~~~~~~~~~~~~
 Very simply, this immediately lifts a downtime that is currently in

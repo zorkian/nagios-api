@@ -154,6 +154,74 @@ def http_log(req, objid, reqobj):
     return json_response(req, NLOG)
 
 
+def http_disable_notifications(req, objid, reqobj):
+    '''Given a service or host, disable notifications for it.
+
+    If you specify the host parameter and also set 'services_too' to
+    true, we will act on the host and all of the services on it.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+    services_too = reqobj['services_too'] if 'services_too' in reqobj else False
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Host or service not found.')
+
+    now = int(time.time())
+    if obj.service is not None:
+        if not send_nagios_command('DISABLE_SVC_NOTIFICATIONS', host, service):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('DISABLE_HOST_NOTIFICATIONS', host):
+            return json_error(req, 'Failed sending command to Nagios.')
+        if services_too:
+            if not send_nagios_command('DISABLE_HOST_SVC_NOTIFICATIONS', host):
+                return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'disabled')
+
+
+def http_enable_notifications(req, objid, reqobj):
+    '''Given a service or host, enable notifications for it.
+
+    If you specify the host parameter and also set 'services_too' to
+    true, we will act on the host and all of the services on it.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+
+    host = reqobj['host'] if 'host' in reqobj else None
+    service = reqobj['service'] if 'service' in reqobj else None
+    services_too = reqobj['services_too'] if 'services_too' in reqobj else False
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Host or service not found.')
+
+    now = int(time.time())
+    if obj.service is not None:
+        if not send_nagios_command('ENABLE_SVC_NOTIFICATIONS', host, service):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('ENABLE_HOST_NOTIFICATIONS', host):
+            return json_error(req, 'Failed sending command to Nagios.')
+        if services_too:
+            if not send_nagios_command('ENABLE_HOST_SVC_NOTIFICATIONS', host):
+                return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'enabled')
+
+
 def http_schedule_downtime(req, objid, reqobj):
     '''Given a service or host, schedule downtime for it. The main mode
     for this API is to schedule a hard downtime that starts now and ends
@@ -605,6 +673,8 @@ def http_handler(req):
         'POST': {
             'cancel_downtime': http_cancel_downtime,
             'schedule_downtime': http_schedule_downtime,
+            'disable_notifications': http_disable_notifications,
+            'enable_notifications': http_enable_notifications,
             'submit_result': http_submit_result,
             'acknowledge_problem': http_acknowledge_problem,
             'remove_acknowledgement': http_remove_acknowledgement,

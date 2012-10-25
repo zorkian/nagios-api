@@ -26,6 +26,12 @@ Status Viewing
 
     nagios-cli services
 
+Notification Management
+
+    nagios-cli disable-notifications <host> [service] [--recursive|r]
+
+    nagios-cli enable-notifications <host> [service] [--recursive|r]
+
 Downtime Management
 
     nagios-cli schedule-downtime <host> [service] <duration>
@@ -258,6 +264,104 @@ def do_cancel_downtime(cmd, args, opts):
     return 0
 
 
+def do_disable_notifications(cmd, args, opts):
+    '''Disable notifications for a host or service. Usage:
+
+        %prog disable-notifications <host> [service] [opts]
+
+    host must be a hostname that Nagios knows about. If specified,
+    service is a service that exists on that host.
+
+    Available options:
+
+        --recursive       Target the host and all services on this host.
+                          You must not specify a specific service.
+
+    Example:
+
+        %prog disable-notifications web01
+            # disable for for web01
+
+        %prog disable-notifications web01 "PING Check"
+            # disable for PING Check on web01
+
+        %prog disable-notifications web03 --recursive
+            # disable for web03 and ALL services on it
+
+    '''
+    p = OptionParser(usage=trim(do_disable_notifications.__doc__))
+    p.disable_interspersed_args()
+    p.add_option('-r', '--recursive', dest='recursive', action='store_true',
+        help='Disable for all services on the given host')
+    p.set_defaults(recursive=False, author=None, comment=None)
+
+    selargs = consume_host_service(args)
+    if selargs is None:
+        p.error('Failed to locate host/service to act on')
+
+    (options, args) = p.parse_args(opts)
+    if options.recursive:
+        selargs += ['services_too=true']
+
+    res = api(['disable_notifications'] + selargs)
+    if isinstance(res, int):
+        return res
+    if not isinstance(res, dict):
+        return critical('API returned unknown object type')
+    if not res['success']:
+        return critical('Failed: %s' % res['content'])
+    return 0
+
+
+def do_enable_notifications(cmd, args, opts):
+    '''Re-enable notifications for a host or service. Usage:
+
+        %prog enable-notifications <host> [service] [opts]
+
+    host must be a hostname that Nagios knows about. If specified,
+    service is a service that exists on that host.
+
+    Available options:
+
+        --recursive       Target the host and all services on this host.
+                          You must not specify a specific service.
+
+    Example:
+
+        %prog enable-notifications web01
+            # enable for for web01
+
+        %prog enable-notifications web01 "PING Check"
+            # enable for PING Check on web01
+
+        %prog enable-notifications web03 --recursive
+            # enable for web03 and ALL services on it
+
+    '''
+    p = OptionParser(usage=trim(do_enable_notifications.__doc__))
+    p.disable_interspersed_args()
+    p.add_option('-r', '--recursive', dest='recursive', action='store_true',
+        help='Enable for all services on the given host')
+    p.set_defaults(recursive=False, author=None, comment=None)
+
+    selargs = consume_host_service(args)
+    if selargs is None:
+        p.error('Failed to locate host/service to act on')
+
+    (options, args) = p.parse_args(opts)
+    if options.recursive:
+        selargs += ['services_too=true']
+
+    res = api(['enable_notifications'] + selargs)
+    if isinstance(res, int):
+        return res
+    if not isinstance(res, dict):
+        return critical('API returned unknown object type')
+    if not res['success']:
+        return critical('Failed: %s' % res['content'])
+    return 0
+
+
 def do_hosts(cmd, args, opts):
     '''Return a plain list of all hosts.
 
@@ -399,6 +503,8 @@ def main(argv):
     dispatch = {
         'schedule-downtime': do_schedule_downtime,
         'cancel-downtime': do_cancel_downtime,
+        'enable-notifications': do_enable_notifications,
+        'disable-notifications': do_disable_notifications,
         'hosts': do_hosts,
         'services': do_services,
     }
