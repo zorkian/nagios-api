@@ -45,8 +45,8 @@ contributors. See the LICENSE file for full licensing information.
 '''
 
 import re
+import requests
 import sys
-import urllib2
 from json import loads, dumps
 from optparse import OptionParser, OptionGroup
 
@@ -118,16 +118,19 @@ def api(args):
 
     # Construct the request object to send it out
     try:
-        res = urllib2.urlopen(url, payload)
-    except urllib2.URLError:
+        if payload is None:
+            res = requests.get(url)
+        else:
+            res = requests.post(url, data=payload,
+                    headers={'Content-Type': 'application/json'})
+    except (requests.ConnectionError, requests.Timeout):
         return critical('Failed connecting to nagios-api server')
     if res is None:
         return critical('Failed requesting resource')
 
     # Probably a JSON response, get it
     try:
-        resobj = loads(res.read())
-        res.close()
+        resobj = loads(res.text)
     except ValueError:
         return critical('Failed parsing server response')
     return resobj

@@ -19,13 +19,14 @@ import time
 import types
 import atexit
 from optparse import OptionParser
-from diesel import Application, Loop, Service, log as glog, sleep
+from diesel import Application, Loop, Service, sleep
+from diesel.logmod import log, levels
 from diesel.util.lock import synchronized
 from diesel.protocols import http
-from json import loads, dumps
+from json import dumps
 from nagios import Nagios
+from werkzeug.exceptions import BadRequest
 
-LOG = None
 CMDFILE = None
 CMD_ENABLED = False
 LOG_ENABLED = False
@@ -42,13 +43,14 @@ def _send_json(req, success, content):
 
     '''
     global ALLOW_ORIGIN
-    headers = http.HttpHeaders()
     out = dumps({ 'success': success, 'content': content }, ensure_ascii=False)
-    headers.add('Content-Length', len(out))
-    headers.add('Content-Type', 'application/json')
+    headers = {
+        'Content-Length': len(out),
+        'Content-Type': 'application/json'
+    }
     if ALLOW_ORIGIN is not None:
-        headers.add('Access-Control-Allow-Origin', ALLOW_ORIGIN)
-    return http.http_response(req, 200, headers, out)
+        headers['Access-Control-Allow-Origin'] = ALLOW_ORIGIN
+    return http.Response(out, 200, headers)
 
 
 def json_error(req, msg):
@@ -642,7 +644,8 @@ def http_handler(req):
     '''
     # All requests should follow this very simple format.
     global URL_REGEX
-    res = URL_REGEX.match(req.url)
+    url = req.script_root + req.path
+    res = URL_REGEX.match(url)
     if res is None:
         return json_error(req, 'Invalid request URI')
     verb, objid = res.group(1), res.group(2)
@@ -654,12 +657,16 @@ def http_handler(req):
         objid = None
 
     # If it's a POST, try to extract a JSON object from the body.
-    try:
-        reqobj = loads(req.body) if req.method == 'POST' else None
-    except ValueError:
-        return json_error(req, 'Invalid JSON body')
-    if reqobj is not None and type(reqobj) is not dict:
-        return json_error(req, 'JSON body must be a dict')
+    reqobj = None
+    if req.method == 'POST':
+        try:
+            reqobj = req.json
+        except BadRequest:
+            return json_error(req, 'Invalid JSON body')
+
+        if reqobj is None:
+            return json_error(req, 'No JSON detected, did you set '
+                    'the Content-Type to application/json?')
 
     # Dispatch table goes here
     dispatch = {
@@ -703,7 +710,7 @@ def send_nagios_command(*args):
     arg = '[%d] ' % int(time.time()) + ';'.join(unicode(j) for j in args)
     arg = arg.encode('latin1')
     with synchronized():
-        info('Sending command: %s' % arg)
+        log.info('Sending command: %s' % arg)
         with open(CMDFILE, 'w') as pipe:
             pipe.write(arg + '\n')
     return True
@@ -732,12 +739,17 @@ def read_log(logfile):
     '''
     global NLOG, NLOGLINES
     f = open(logfile, 'r')
+    cts = 0
     while True:
         loc = f.tell()
         line = f.readline()
         if not line:
             sleep(1)
             f.seek(loc)
+            cts += 1 # Handle log rollovers by watching for no activity.
+            if cts >= 60:
+                f = open(logfile, 'r')
+                cts = 0
         else:
             NLOGLINES += 1
             NLOG.append(line.strip())
@@ -749,7 +761,7 @@ def main(argv):
     '''A simple REST API for Nagios3.
 
     '''
-    global LOG, CMDFILE, CMD_ENABLED, LOG_ENABLED, ALLOW_ORIGIN
+    global CMDFILE, CMD_ENABLED, LOG_ENABLED, ALLOW_ORIGIN
     app = Application()
 
     parser = OptionParser(description='Give Nagios a REST API.')
@@ -778,9 +790,7 @@ def main(argv):
         parser.error('Port must be in the range 1..65535.')
 
     if options.quiet:
-        LOG = glog.sublog('nagios-api', glog.warning)
-    else:
-        LOG = glog.sublog('nagios-api', glog.info)
+        log.min_level = levels.WARNING
 
     if os.path.exists(options.commandfile):
         CMD_ENABLED = True
@@ -788,7 +798,7 @@ def main(argv):
     if options.alloworigin:
         ALLOW_ORIGIN = options.alloworigin
 
-    info('Listening on port %d, starting to rock and roll!' % options.port)
+    log.info('Listening on port %d, starting to rock and roll!' % options.port)
     app.add_service(Service(http.HttpServer(http_handler), options.port,
             options.bind_addr))
     app.add_loop(Loop(read_status, options.statusfile), keep_alive=True)
@@ -799,35 +809,10 @@ def main(argv):
     return 1
 
 
-def critical(msg):
-    '''Handle error messaging.
-
-    '''
-    global LOG
-    LOG.critical(msg)
-    return 1
-
-
-def info(msg):
-    '''Print an informative logging message.
-
-    '''
-    global LOG
-    LOG.info(msg)
-    return 0
-
-
-def warn(msg):
-    '''Print a warning message.
-
-    '''
-    global LOG
-    LOG.warn(msg)
-    return 0
-
 def _exitfunc():
     print "Exiting. Cleaning up PID."
     os.unlink(PIDFILE)
+
 
 if __name__ == '__main__':
     pid = str(os.getpid())
