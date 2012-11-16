@@ -142,7 +142,8 @@ class HostOrService(NagiosObject):
         self.essential_keys = ['current_state', 'plugin_output',
             'notifications_enabled', 'last_check', 'last_notification',
             'active_checks_enabled', 'problem_has_been_acknowledged',
-            'last_hard_state', 'scheduled_downtime_depth', 'performance_data']
+            'last_hard_state', 'scheduled_downtime_depth', 'performance_data',
+            'last_state_change', 'current_attempt', 'max_attempts']
 
     def attach_downtime(self, dt):
         '''Given a Downtime object, store a record to it for lookup later.'''
