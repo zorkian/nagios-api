@@ -123,14 +123,61 @@ This section is organized into methods and sorted alphabetically. Each
 method is specified as a URL and may include an integer component on the
 path. Most data is passed as JSON objects in the body of a POST.
 
-enable_notifications
-~~~~~~~~~~~~~~~~~~~~
-Undocumented. Works like cancel_downtime, except no ID. Submit a host,
-and either a service name, or specify services_too to enable all.
+acknowledge_problem
+~~~~~~~~~~~~~~~~~~~
+This method allows you to acknowledge a given problem on a host or service.
 
-disable_notifications
-~~~~~~~~~~~~~~~~~~~~~
-As above for enable.
+*host*='STRING' [required]::
+    Which host to act on.
+
+*service*='STRING'::
+    Optional. If specified, act on this service.
+
+*comment*='STRING' [required]::
+    This is required and should contain some sort of message that explains why
+    this alert is being acknowledged.
+
+*sticky*='BOOL'::
+    Optional, default TRUE. When true, this acknowledgement stays until the
+    host enters an OK state. If false, the acknowledgement clears on ANY state
+    change.
+
+*notify*='BOOL'::
+    Optional, default TRUE. Whether or not to send a notification that this
+    problem has been acknowledged.
+
+*persistent*='BOOL'::
+    Optional, default FALSE. If this is enabled, the comment given will stay
+    on the host or service. By default, when an acknowledgement expires, the
+    comment associated with it is deleted.
+
+*author*='STRING'::
+    Optional. The name of the author. This is useful in UIs if you want
+    to disambiguate who is doing what.
+
+add_comment
+~~~~~~~~~~~
+For a given host and/or service, add a comment. This is free-form text that can
+include whatever you want and is visible in the Nagios UI and API output.
+
+*host*='STRING' [required]::
+    Which host to act on.
+
+*service*='STRING'::
+    Optional. If specified, act on this service.
+
+*comment*='STRING' [required]::
+    This is required and should contain the text of the comment you want to
+    add to this host or service.
+
+*persistent*='BOOL'::
+    Optional, default FALSE. If this is enabled, the comment given will stay
+    on the host or service until deleted manually. By default, they only stay
+    until Nagios is restarted.
+
+*author*='STRING'::
+    Optional. The name of the author. This is useful in UIs if you want
+    to disambiguate who is doing what.
 
 cancel_downtime
 ~~~~~~~~~~~~~~~
@@ -156,6 +203,43 @@ cancel by host/service as well.
     specific, then we will cancel all downtimes on this host and all of
     the services it has.
 
+disable_notifications
+~~~~~~~~~~~~~~~~~~~~~
+This disables alert notifications on a host or service. (As an operational
+note, you might want to schedule downtime instead. Disabling notifications
+has a habit of leaving things off and people forgetting about it.)
+
+*host*='STRING' [required]::
+    Which host to act on.
+
+*service*='STRING'::
+    Optional. If specified, act on this service.
+
+delete_comment
+~~~~~~~~~~~~~~
+Deletes comments from a host or service. Can be used to delete all comments or
+just a particular comment.
+
+*host*='STRING' [required]::
+    Which host to act on.
+
+*service*='STRING'::
+    Optional. If specified, act on this service.
+
+*comment_id*='INTEGER' [required]::
+    The ID of the comment you wish to delete. You may set this to -1 to delete
+    all comments on the given host or service.
+
+enable_notifications
+~~~~~~~~~~~~~~~~~~~~
+This enables alert notifications on a host or service.
+
+*host*='STRING' [required]::
+    Which host to act on.
+
+*service*='STRING'::
+    Optional. If specified, act on this service.
+
 log
 ~~~
 Simply returns the most recent 1000 items in the Nagios event log. These
@@ -167,6 +251,42 @@ objects
 Returns a dict with the key being hostnames and the values being a list
 of services defined for that host. Use this method to get the contents
 of the world -- i.e., all hosts and services.
+
+remove_acknowledgement
+~~~~~~~~~~~~~~~~~~~~~~
+This method cancels an acknowledgement on a host or service.
+
+*host*='STRING' [required]::
+    Which host to act on.
+
+*service*='STRING'::
+    Optional. If specified, act on this service.
+
+schedule_check
+~~~~~~~~~~~~~~
+This API lets you schedule a check for a host or service. This also allows
+you to force a check.
+
+*host*='STRING' [required]::
+    The host to schedule a check for. Required.
+
+*service*='STRING'::
+    Optional. If present, we'll schedule a check on this service at the given
+    time.
+
+*check_time*='INTEGER'::
+    Optional, defaults to now. You can specify what time you want the check
+    to be run at.
+
+*forced*='BOOL'::
+    Optional, defaults to FALSE. When true, then you force Nagios to run the
+    check at the given time. By default, Nagios will only run the check if it
+    meets the standard eligibility criteria.
+
+*output*='STRING' [required]::
+    The plugin output to be displayed in the UI and stored.  This is a
+    single line of text, normally returned by checkers.
+
 
 schedule_downtime
 ~~~~~~~~~~~~~~~~~

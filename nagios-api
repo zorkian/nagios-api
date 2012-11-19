@@ -434,10 +434,11 @@ def http_acknowledge_problem(req, objid, reqobj):
 def http_remove_acknowledgement(req, objid, reqobj):
     '''Removes an acknowledgement from a host or service.
 
-    You are required to send at minimum a host parameter, and you can also
-    supply an optional service parameter. If no service is supplied, the
-    host will be acknowledged, and if the service parameter is supplied
-    only the specific service will be acknowledged.
+    You are required to send at minimum a host parameter, and
+    you can also supply an optional service parameter. If no
+    service is supplied, the host will be acknowledged, and if the
+    service parameter is supplied only the specific service will be
+    acknowledged.
 
     '''
     global NAGIOS, CMD_ENABLED
@@ -464,16 +465,16 @@ def http_add_comment(req, objid, reqobj):
     '''Adds a comment to a host or service.
 
     You are required to send at minimum a host and comment parameter,
-    and you can also supply an optional service parameter. If the service
-    parameter is supplied, the comment will be added to the specific service
-    and if its omitted, the comment will be added to the host
+    and you can also supply an optional service parameter. If the
+    service parameter is supplied, the comment will be added to the
+    specific service and if its omitted, the comment will be added to
+    the host
 
     The following options are also available, but optional.
 
-    persistent (0/1): If set to 1, the comment will remain until manually
-    deleted, if set to 0, it will automatically be purged at the next
-    restart of the Nagios process. Defaults to 0 (off)
-    or host problem has been resolved. Defaults to 0 (off).
+    persistent (0/1): If set to 1, the comment will remain until
+    manually deleted, if set to 0, it will automatically be purged at
+    the next restart of the Nagios process. Defaults to 0 (off)
 
     author (string): This is the name displayed as the creator of the
     comment. This will default to 'nagios-api'.
@@ -515,10 +516,9 @@ def http_add_comment(req, objid, reqobj):
 def http_delete_comment(req, objid, reqobj):
     '''Deletes one or all comments for a host or service.
 
-    You are required to supply atleast the host parameter along
-    with comment_id, detailing the comment to delete. You can also
-    supply the service parameter to delete comments from a specific
-    service.
+    You are required to supply atleast the host parameter along with
+    comment_id, detailing the comment to delete. You can also supply the
+    service parameter to delete comments from a specific service.
 
     If comment_id is set to -1, all comments for the host or service
     will be deleted.
@@ -564,31 +564,30 @@ def http_delete_comment(req, objid, reqobj):
 def http_schedule_check(req, objid, reqobj):
     '''Schedules a check for a host or service.
 
-    Requires the host parameter to be sent, and also accepts
-    a service parameter. If the service parameter is set to
-    *, all check will be scheduled for all services on the host.
+    Requires the host parameter to be sent, and also accepts a service
+    parameter. If you wish to schedule checks for all services on a host,
+    you can use the all_services parameter.
 
-    Scheduling a non-forced check, does not mean the check will
-    occur. If active checks have been disabled either on a
-    program-wide or service level, or the services are already
-    scheduled to be checked sooner than your requested time,
-    the check will not be performed, unless forced mode is
-    enabled (see below).
+    Scheduling a non-forced check, does not mean the check will occur.
+    If active checks have been disabled either on a program-wide or
+    service level, or the services are already scheduled to be checked
+    sooner than your requested time, the check will not be performed,
+    unless forced mode is enabled (see below).
 
     The following optional parameters are also available:
 
-    check_time (int): The time at which to schedule the check,
-    in time_t (UNIX timestamp) format. Defaults to current time.
+    check_time (int): The time at which to schedule the check, in time_t
+    (UNIX timestamp) format. Defaults to current time.
 
-    forced (0/1): If set to 1, the scheduled check will be
-    marked as forced, meaning it will be performed, even if
-    there has been other checks run on the host or service
-    in the mean time. Defaults to 0 (off)
+    forced (0/1): If set to 1, the scheduled check will be marked as
+    forced, meaning it will be performed, even if there has been other
+    checks run on the host or service in the mean time. Defaults to 0
+    (off).
 
-    all_services (0/1): If set to 1, all services for the
-    specified host will be checked. Enabling this option, will
-    cause the service parameter to be ignored, if supplied.
-    Defaults to 0 (off)
+    all_services (0/1): If set to 1, all services for the specified
+    host will be checked. Enabling this option, will cause the service
+    parameter to be ignored, if supplied. Defaults to 0 (off).
+
     '''
     from time import time
     global NAGIOS, CMD_ENABLED
