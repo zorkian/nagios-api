@@ -24,7 +24,7 @@ Status Viewing
 
     nagios-cli hosts
 
-    nagios-cli services
+    nagios-cli services <host>
 
 Notification Management
 
