@@ -5,7 +5,11 @@
 This provides a simple REST interface to Nagios3. See the README for
 more information about this software.
 
-Copyright 2011 by Bump Technologies, Inc and other authors and
+Originally from:
+
+    https://github.com/xb95/nagios-api
+
+Copyright (c) 2011-2012 by Bump Technologies, Inc and other authors and
 contributors. See the LICENSE file for full licensing information.
 
 '''
@@ -169,9 +173,9 @@ def http_disable_notifications(req, objid, reqobj):
     if objid is not None:
         return json_error(req, 'Unexpected object ID.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
-    services_too = reqobj['services_too'] if 'services_too' in reqobj else False
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    services_too = reqobj.get('services_too', False)
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
@@ -203,9 +207,9 @@ def http_enable_notifications(req, objid, reqobj):
     if objid is not None:
         return json_error(req, 'Unexpected object ID.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
-    services_too = reqobj['services_too'] if 'services_too' in reqobj else False
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    services_too = reqobj.get('services_too', False)
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
@@ -239,13 +243,13 @@ def http_schedule_downtime(req, objid, reqobj):
     if objid is not None:
         return json_error(req, 'Unexpected object ID.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
-    author = reqobj['author'] if 'author' in reqobj else 'nagios-api'
-    comment = reqobj['comment'] if 'comment' in reqobj else 'schedule downtime'
-    services_too = reqobj['services_too'] if 'services_too' in reqobj else False
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    services_too = reqobj.get('services_too', False)
+    author = reqobj.get('author', 'nagios-api')
+    comment = reqobj.get('comment', 'schedule downtime')
     try:
-        dur = int(reqobj['duration']) if 'duration' in reqobj else 0
+        dur = int(reqobj.get('duration', 0))
     except ValueError:
         dur = 0
 
@@ -293,9 +297,9 @@ def http_cancel_downtime(req, objid, reqobj):
             return json_error(req, 'Downtime ID does not seem valid.')
         dts += [NAGIOS.downtimes[objid]]
     else:
-        host = reqobj['host'] if 'host' in reqobj else None
-        service = reqobj['service'] if 'service' in reqobj else None
-        services_too = reqobj['services_too'] if 'services_too' in reqobj else False
+        host = reqobj.get('host')
+        service = reqobj.get('service')
+        services_too = reqobj.get('services_too', False)
         obj = NAGIOS.host_or_service(host, service)
         if obj is None:
             return json_error(req, 'Failed to get host or service for downtime.')
@@ -337,8 +341,9 @@ def http_submit_result(req, objid, reqobj):
     if not CMD_ENABLED:
         return json_error(req, 'External commands not enabled on nagios-api.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
         return json_error(req, 'Failed to find host or service to update.')
@@ -398,13 +403,13 @@ def http_acknowledge_problem(req, objid, reqobj):
     if not CMD_ENABLED:
         return json_error(req, 'External commands not enabled on nagios-api.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
-    comment = reqobj['comment'] if 'comment' in reqobj else None
-    sticky = reqobj['sticky'] if 'sticky' in reqobj else 1
-    notify = reqobj['notify'] if 'notify' in reqobj else 1
-    persistent = reqobj['persistent'] if 'persistent' in reqobj else 0
-    author = reqobj['author'] if 'author' in reqobj else 'nagios-api'
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    comment = reqobj.get('comment')
+    author = reqobj.get('author', 'nagios-api')
+    sticky = reqobj.get('sticky', 1)
+    notify = reqobj.get('notify', 1)
+    persistent = reqobj.get('persistent', 0)
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
@@ -445,8 +450,8 @@ def http_remove_acknowledgement(req, objid, reqobj):
     if not CMD_ENABLED:
         return json_error(req, 'External commands not enabled on nagios-api.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
+    host = reqobj.get('host')
+    service = reqobj.get('service')
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
@@ -484,11 +489,11 @@ def http_add_comment(req, objid, reqobj):
     if not CMD_ENABLED:
         return json_error(req, 'External commands not enabled on nagios-api.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
-    comment = reqobj['comment'] if 'comment' in reqobj else None
-    persistent = reqobj['persistent'] if 'persistent' in reqobj else 0
-    author = reqobj['author'] if 'author' in reqobj else 'nagios-api'
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    persistent = reqobj.get('persistent', 0)
+    comment = reqobj.get('comment')
+    author = reqobj.get('author', 'nagios-api')
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
@@ -528,9 +533,9 @@ def http_delete_comment(req, objid, reqobj):
     if not CMD_ENABLED:
         return json_error(req, 'External commands not enabled on nagios-api.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
-    comment_id = reqobj['comment_id'] if 'comment_id' in reqobj else None
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    comment_id = reqobj.get('comment_id')
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
@@ -594,11 +599,11 @@ def http_schedule_check(req, objid, reqobj):
     if not CMD_ENABLED:
         return json_error(req, 'External commands not enabled on nagios-api.')
 
-    host = reqobj['host'] if 'host' in reqobj else None
-    service = reqobj['service'] if 'service' in reqobj else None
-    check_time = reqobj['check_time'] if 'check_time' in reqobj else time()
-    forced = reqobj['forced'] if 'forced' in reqobj else 0
-    all_services = reqobj['all_services'] if 'all_services' in reqobj else 0
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    check_time = reqobj.get('check_time', time())
+    forced = reqobj.get('forced', 0)
+    all_services = reqobj.get('all_services', 0)
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
