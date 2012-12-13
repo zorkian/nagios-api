@@ -22,6 +22,8 @@ import sys
 import time
 import types
 import atexit
+from gzip import GzipFile
+from StringIO import StringIO
 from optparse import OptionParser
 from diesel import Application, Loop, Service, sleep
 from diesel.logmod import log, levels
@@ -54,6 +56,13 @@ def _send_json(req, success, content):
     }
     if ALLOW_ORIGIN is not None:
         headers['Access-Control-Allow-Origin'] = ALLOW_ORIGIN
+    if 'gzip' in req.headers.get('Accept-Encoding', ''):
+        headers['Content-Encoding'] = 'gzip'
+        strout = StringIO()
+        f = GzipFile(fileobj=strout, mode='w')
+        f.write(out)
+        f.close()
+        out = strout.getvalue()
     return http.Response(out, 200, headers)
 
 
