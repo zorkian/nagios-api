@@ -54,6 +54,9 @@ class Nagios:
                                 performance_data[c_key] = n_val
                         val = performance_data
                     cur[key] = val
+                elif "#" in line:
+                    if line.find("NAGIOS STATE RETENTION FILE") is not -1:
+                        raise ValueError("You appear to have used the state retention file instead of the status file. Please change your arguments and try again.")
             if cur is not None:
                 yield cur
 
@@ -78,7 +81,12 @@ class Nagios:
             for s in self.services[host].itervalues():
                 self.host_or_service(host).attach_service(s)
         for c in self.comments.itervalues():
-            self.host_or_service(c.host, c.service).attach_comment(c)
+            tmp = self.host_or_service(c.host, c.service)
+            if (tmp is None):
+                # FIXME: throw something? 
+                pass
+            else:
+                tmp.attach_comment(c)
         for d in self.downtimes.itervalues():
             self.host_or_service(d.host, d.service).attach_downtime(d)
 
