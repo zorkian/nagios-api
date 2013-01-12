@@ -1,6 +1,5 @@
 nagios-api
 ==========
-:doctype: manpage
 
 
 NAME
@@ -10,12 +9,13 @@ nagios-api - presents a REST-like JSON interface to Nagios
 
 SYNOPSIS
 --------
-*nagios-api* ['OPTIONS']
+nagios-api [OPTIONS]
 
 
 DEPENDENCIES
 ------------
-Dependencies include: diesel, greenlet and python-openssl bindings
+Dependencies include: diesel, greenlet and python-openssl bindings. These
+should be available via pip/easy_install.
 
 
 DESCRIPTION
@@ -31,8 +31,8 @@ USAGE
 -----
 Usage is pretty easy:
 
-  nagios-api -p 8080 -c /var/lib/nagios3/rw/nagios.cmd \
-             -s /var/cache/nagios3/status.dat -l /var/log/nagios3/nagios.log
+    nagios-api -p 8080 -c /var/lib/nagios3/rw/nagios.cmd \
+        -s /var/cache/nagios3/status.dat -l /var/log/nagios3/nagios.log
 
 You must at least provide the status file options. If you don't provide
 the other options, then we will disable that functionality and error to
@@ -45,17 +45,17 @@ The server speaks JSON. You can either GET data from it or POST data to
 it and take an action. It's pretty straightforward, here's an idea of
 what you can do from the command line:
 
-  curl http://localhost:6315/state
+    curl http://localhost:6315/state
 
 That calls the `state` method and returns the JSON result.
 
-  curl -d '{"host": "web01", "duration": 600}' \
+    curl -d '{"host": "web01", "duration": 600}' \
       http://localhost:6315/schedule_downtime
 
 This POSTs the given JSON object to the `schedule_downtime` method. You
 will note that all objects returned follow a predictable format:
 
-  {"content": <object>, "result": <bool>}
+    {"content": <object>, "result": <bool>}
 
 The `result` field is always `true` or `false`, allowing you to
 determine at a glance if the command succeeded. The `content` field may
@@ -69,7 +69,7 @@ Once your API server is up and running you can access it through the
 included nagios-cli script. The script now has some decent built-in help
 so you should be able to get all you need:
 
-  nagios-cli -h
+    nagios-cli -h
 
 The original raw JSON mode is still supported by passing the --raw
 option.
@@ -77,40 +77,47 @@ option.
 
 OPTIONS
 -------
-*-p, --port*='PORT'::
-    Listen on port 'PORT' for HTTP requests.
+    -p, --port=PORT
 
-*-b, --bind*='ADDR'::
-    Bind to ADDR for HTTP requests (defaults to all interfaces).
+Listen on port 'PORT' for HTTP requests.
 
-*-c, --command-file*='FILE'::
-    Use 'FILE' to write commands to Nagios. This is where external
-    commands are sent. If your Nagios installation does not allow
-    external commands, do not set this option.
+    -b, --bind=ADDR
 
-*-s, --status-file*='FILE'::
-    Set 'FILE' to the status file where Nagios stores its status
-    information. This is where we learn about the state of the world and
-    is the only required parameter.
+Bind to ADDR for HTTP requests (defaults to all interfaces).
 
-*-l, --log-file*='FILE'::
-    Point 'FILE' to the location of Nagios's log file if you want to
-    allow people to subscribe to it.
+    -c, --command-file=FILE
 
-*-o, --allow-origin*='ORIGIN'::
-    Modern web browsers implement the Cross-Origin Resource Sharing
-    specification from W3C. This spec allows you to host your
-    JavaScript/HTML on one host and have it access an endpoint on a
-    different service. This requires setting a header on the endpoint,
-    which this option allows you to do.
-+
+Use 'FILE' to write commands to Nagios. This is where external
+commands are sent. If your Nagios installation does not allow
+external commands, do not set this option.
+
+    -s, --status-file=FILE
+
+Set 'FILE' to the status file where Nagios stores its status
+information. This is where we learn about the state of the world and
+is the only required parameter.
+
+    -l, --log-file=FILE
+
+Point 'FILE' to the location of Nagios's log file if you want to
+allow people to subscribe to it.
+
+    -o, --allow-origin=ORIGIN
+
+Modern web browsers implement the Cross-Origin Resource Sharing
+specification from W3C. This spec allows you to host your
+JavaScript/HTML on one host and have it access an endpoint on a
+different service. This requires setting a header on the endpoint,
+which this option allows you to do.
+
 You can simply set this header to `*` and not worry about it
 if you want to allow all access. For more information see the
-http://www.w3.org/TR/cors/[CORS specification].
+[CORS specification](http://www.w3.org/TR/cors/).
 
-*-q, --quiet*::
-    If present, we will only print warning/critical messages. Useful if
-    you are running this in the background.
+    -q, --quiet
+
+If present, we will only print warning/critical messages. Useful if
+you are running this in the background.
 
 
 API
