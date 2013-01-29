@@ -130,9 +130,14 @@ def api(args):
 
     # Probably a JSON response, get it
     try:
-        resobj = loads(res.text)
+        if (res.headers['content-encoding'] == "gzip"):
+            resobj = loads(res.content)
+        else:
+            resobj = loads(res.text)
     except ValueError:
         return critical('Failed parsing server response')
+    except TypeError:
+        return critical('Failed parsing JSON in server response')
     return resobj
 
 
