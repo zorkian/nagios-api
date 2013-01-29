@@ -39,7 +39,13 @@ Downtime Management
 
     nagios-cli cancel-downtime <host> [service] [--recursive|-r]
 
-Copyright 2011 by Bump Technologies, Inc and other authors and
+Problem Management
+
+    nagios-cli acknowledge-problem <host> [service] <--comment|-c=TEXT>
+        [--sticky|-s=TRUE|false] [--notify|-n=TRUE|false]
+        [--persistent|-p=true|FALSE] [--author|-a=TEXT]
+
+Copyright 2011-2013 by Bump Technologies, Inc and other authors and
 contributors. See the LICENSE file for full licensing information.
 
 '''
@@ -369,6 +375,80 @@ def do_enable_notifications(cmd, args, opts):
         return critical('Failed: %s' % res['content'])
     return 0
 
+def do_acknowledge_problem(cmd, args, opts):
+    '''Acknowledge problem for a host or service. Usage:
+
+        %prog acknowledge-problem <host> [service] --comment=TEXT [opts]
+
+    host must be a hostname that Nagios knows about. If specified,
+    service is a service that exists on that host. Comment must be specified.
+
+    Available options:
+
+        --comment=TEXT   	Comment on the acknowledged problem.
+        
+        --sticky=TRUE/FALSE  	[defaults to TRUE] If sticky, an acknowledgement hangs around
+                                until a host reaches "OK" - otherwise, it goes away on next
+                                state change.
+        
+        --notify=TRUE/FALSE	[defaults to TRUE] If TRUE, sends notification that an 
+                                acknowledgement has occurred.
+        
+        --persistent=TRUE/FALSE	[defaults to FALSE] If TRUE, the comment will remain after the
+                                host returns to "OK" state.
+        
+        --author=STR		[defaults to "nagios-api"] Who is doing the acknowledging.
+
+    Example:
+
+        %prog acknowledge-problem web01 --comment="Critical Failure"
+            # acknowledge problem for web01 with comment "Critical Failure"
+
+        %prog acknowledge-problem web03 "HTTP" --comment="Critical Failure" 
+            # acknowledge problem on HTTP service for web03 with comment "Critical Failure"
+
+    '''
+    p = OptionParser(usage=trim(do_acknowledge_problem.__doc__))
+    p.disable_interspersed_args()
+    p.add_option('-c', '--comment', dest='comment', action='store',
+        help="Comment on the acknowledged problem.")
+    p.add_option('-s', '--sticky', dest='sticky', action='store_false',
+        help='Does acknowledgement hang around until "OK" reached by host?')
+    p.add_option('-n', '--notify', dest='notify', action='store_false',
+        help='Should we send a notification of the acknowledgment?')
+    p.add_option('-p', '--persistent', dest='persistent', action='store_true',
+        help='Should the comment hang around after the problem expires?')
+    p.add_option('-a', '--author', dest='author', action='store',
+        help='Name appearing for who does the acknowledgment.')
+    p.set_defaults(sticky=True,notify=True,persistent=False,author=None)
+
+    selargs = consume_host_service(args)
+    if selargs is None:
+        p.error('Failed to locate host/service to act on')
+
+    (options, args) = p.parse_args(opts)
+    if options.comment:
+        selargs += ['comment=%s' % options.comment]
+    else:
+        return critical('Did not include comment when required!')
+    if options.sticky is not True:
+        selargs += ['sticky=FALSE']
+    if options.notify is not True:
+        selargs += ['notify=FALSE']
+    if options.persistent:
+        selargs += ['persistent=TRUE']
+    if options.author:
+        selargs += ['author=%s' % options.author]
+
+    res = api(['acknowledge_problem'] + selargs)
+    if isinstance(res, int):
+        return res
+    if not isinstance(res, dict):
+        return critical('API returned unknown object type')
+    if not res['success']:
+        return critical('Failed: %s' % res['content'])
+    return 0
+
 
 def do_hosts(cmd, args, opts):
     '''Return a plain list of all hosts.
@@ -518,6 +598,7 @@ def main(argv):
         'cancel-downtime': do_cancel_downtime,
         'enable-notifications': do_enable_notifications,
         'disable-notifications': do_disable_notifications,
+        'acknowledge-problem': do_acknowledge_problem,
         'hosts': do_hosts,
         'services': do_services,
     }
