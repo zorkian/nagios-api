@@ -1,0 +1,6 @@
+1.1: February 14th, 2013
+ * Fix gzip handling in nagios-cli [rincebrain]
+ + Add acknowledge-problem support to nagios-cli [rincebrain]
+
+1.0: January 15th, 2013
+ - Initial release [various contributors]
