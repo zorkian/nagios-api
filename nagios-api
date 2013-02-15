@@ -42,7 +42,7 @@ NAGIOS = None
 NLOG = []
 NLOGLINES = 0
 ALLOW_ORIGIN = None
-PIDFILE = "/var/run/nagios-api.pid"
+PID_FILE = "/var/run/nagios-api.pid"
 
 
 def _send_json(req, success, content):
@@ -774,12 +774,27 @@ def read_log(logfile):
             NLOG = NLOG[-1000:]  # Keep the most recent 1k lines.
     f.close()  # Useless?
 
+def write_pid():
+    '''Write pid file
+
+    '''
+    global PID_FILE
+    if os.path.isfile(PID_FILE):
+        sys.stderr.write("%s already exists, exiting\n" % PID_FILE)
+        sys.exit(1)
+    else:
+        try:
+            file(PID_FILE, 'w').write(str(os.getpid()))
+        except Exception as e:
+            sys.stderr.write("%s\n" % e)
+            sys.stderr.write("Unable to write pid file: %s\n" % PID_FILE)
+            sys.exit(1)
 
 def main(argv):
     '''A simple REST API for Nagios3.
 
     '''
-    global CMDFILE, CMD_ENABLED, LOG_ENABLED, ALLOW_ORIGIN
+    global CMDFILE, CMD_ENABLED, LOG_ENABLED, ALLOW_ORIGIN, PID_FILE
     app = Application()
 
     parser = OptionParser(description='Give Nagios a REST API.')
@@ -798,6 +813,8 @@ def main(argv):
             default='', help='The address to listen for requests on.')
     parser.add_option('-p', '--port', dest='port', metavar='PORT', type='int',
             default=6315, help='The port to listen for requests on.')
+    parser.add_option('-f', '--pid-file', dest='pid_file', metavar='PID_FILE',
+            default=PID_FILE, help='File to write pid to')
     parser.add_option('-q', '--quiet', dest='quiet', action='store_true',
             help='Quiet mode')
     (options, args) = parser.parse_args(args=argv[1:])
@@ -816,6 +833,9 @@ def main(argv):
     if options.alloworigin:
         ALLOW_ORIGIN = options.alloworigin
 
+    PID_FILE = options.pid_file
+    write_pid()
+
     log.info('Listening on port %d, starting to rock and roll!' % options.port)
     app.add_service(Service(http.HttpServer(http_handler), options.port,
             options.bind_addr))
@@ -828,18 +848,20 @@ def main(argv):
 
 
 def _exitfunc():
+    global PID_FILE
     print "Exiting. Cleaning up PID."
-    os.unlink(PIDFILE)
+    if PID_FILE is not None:
+        os.unlink(PID_FILE)
 
 
 if __name__ == '__main__':
     pid = str(os.getpid())
 
-    if os.path.isfile(PIDFILE):
-        print "%s already exists, exiting" % PIDFILE
+    if os.path.isfile(PID_FILE):
+        print "%s already exists, exiting" % PID_FILE
         sys.exit()
     else:
-        file(PIDFILE, 'w').write(pid)
+        file(PID_FILE, 'w').write(pid)
 
     atexit.register(_exitfunc)
     signal(SIGTERM, lambda signum, stack_frame: sys.exit(1))
