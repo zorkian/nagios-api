@@ -32,6 +32,7 @@ from diesel.protocols import http
 from json import dumps
 from nagios import Nagios
 from werkzeug.exceptions import BadRequest
+from signal import signal, SIGTERM
 
 CMDFILE = None
 CMD_ENABLED = False
@@ -841,5 +842,6 @@ if __name__ == '__main__':
         file(PIDFILE, 'w').write(pid)
 
     atexit.register(_exitfunc)
+    signal(SIGTERM, lambda signum, stack_frame: sys.exit(1))
 
     sys.exit(main(sys.argv))

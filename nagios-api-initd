@@ -1,0 +1,53 @@
+#!/bin/bash
+#
+#	/etc/rc.d/init.d/nagios-api
+#
+# Starts the Nagios API
+#
+# chkconfig: 2345 90 10
+# description: Nagios API Daemon
+
+# processname: nagios-api
+
+source /etc/rc.d/init.d/functions
+
+RETVAL=0
+NAG_API_DIR="/usr/local/nagios-api"
+NAG_DIR="/usr/nagios"
+PROG="nagios-api"
+DESC="Nagios API Daemon"
+
+start() {
+  echo -n $"Starting $DESC ($PROG): "
+  NAGCMD="nohup /usr/bin/python26 $NAG_API_DIR/$PROG -s $NAG_DIR/var/status.dat -c $NAG_DIR/var/rw/nagios.cmd > /var/log/nagios-api.log 2>&1 &"
+  echo "Running $NAGCMD"
+	$NAGCMD
+	RETVAL=$?
+	return $RETVAL
+}
+
+stop() {
+	echo -n $"Shutting down $DESC ($PROG): "
+	kill $(cat /var/run/nagios-api.pid)
+	RETVAL=$?
+	return $RETVAL
+}
+
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  restart)
+	stop
+	start
+	RETVAL=$?
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	RETVAL=1
+esac
+
+exit $RETVAL

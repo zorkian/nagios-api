@@ -1,3 +1,6 @@
+Unreleased:
+ + Add nagios-api-initd script [jonlives]
+
 1.1: February 14th, 2013
  * Fix gzip handling in nagios-cli [rincebrain]
  + Add acknowledge-problem support to nagios-cli [rincebrain]
