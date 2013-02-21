@@ -1,5 +1,5 @@
 Unreleased:
- + Add nagios-api-initd script [jonlives]
+ + Add nagios-api-initd script for RedHat/CentOS [jonlives]
  + Add --pid-file option [lollipopman]
 
 1.1: February 14th, 2013
