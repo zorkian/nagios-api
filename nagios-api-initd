@@ -3,6 +3,7 @@
 #	/etc/rc.d/init.d/nagios-api
 #
 # Starts the Nagios API
+# (RedHat/CentOS only!)
 #
 # chkconfig: 2345 90 10
 # description: Nagios API Daemon
