@@ -866,12 +866,6 @@ def _exitfunc():
 if __name__ == '__main__':
     pid = str(os.getpid())
 
-    if os.path.isfile(PID_FILE):
-        print "%s already exists, exiting" % PID_FILE
-        sys.exit()
-    else:
-        file(PID_FILE, 'w').write(pid)
-
     atexit.register(_exitfunc)
     signal(SIGTERM, lambda signum, stack_frame: sys.exit(1))
 
