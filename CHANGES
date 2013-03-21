@@ -1,3 +1,6 @@
+1.2.1: March 21st, 2013
+ * Fix SIGTERM handler to clean up pid [xb95]
+
 1.2: March 21st, 2013
  + Add nagios-api-initd script for RedHat/CentOS [jonlives]
  + Add --pid-file option [lollipopman]

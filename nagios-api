@@ -856,10 +856,10 @@ def main(argv):
     return 1
 
 
-def _exitfunc():
+def _exitfunc(*args):
     global PID_FILE
-    print "Exiting. Cleaning up PID."
-    if PID_FILE is not None:
+    if PID_FILE is not None and os.path.isfile(PID_FILE):
+        print "Exiting. Cleaning up PID."
         os.unlink(PID_FILE)
 
 
@@ -867,6 +867,6 @@ if __name__ == '__main__':
     pid = str(os.getpid())
 
     atexit.register(_exitfunc)
-    signal(SIGTERM, lambda signum, stack_frame: sys.exit(1))
+    signal(SIGTERM, _exitfunc)
 
     sys.exit(main(sys.argv))
