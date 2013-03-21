@@ -3,6 +3,6 @@
 # Nagios class.
 #
 
-version = "1.1"
+version = "1.2"
 
 from core import *

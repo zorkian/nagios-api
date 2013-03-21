@@ -1,6 +1,7 @@
-Unreleased:
+1.2: March 21st, 2013
  + Add nagios-api-initd script for RedHat/CentOS [jonlives]
  + Add --pid-file option [lollipopman]
+ + Include comment/downtime data in hosts output [ryanfrantz]
 
 1.1: February 14th, 2013
  * Fix gzip handling in nagios-cli [rincebrain]
