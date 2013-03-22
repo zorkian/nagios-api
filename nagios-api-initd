@@ -20,11 +20,9 @@ DESC="Nagios API Daemon"
 
 start() {
   echo -n $"Starting $DESC ($PROG): "
-  NAGCMD="nohup /usr/bin/python26 $NAG_API_DIR/$PROG -s $NAG_DIR/var/status.dat -c $NAG_DIR/var/rw/nagios.cmd > /var/log/nagios-api.log 2>&1 &"
-  echo "Running $NAGCMD"
-	$NAGCMD
-	RETVAL=$?
-	return $RETVAL
+  daemon /usr/bin/python26 $NAG_API_DIR/$PROG -s $NAG_DIR/var/status.dat -c $NAG_DIR/var/rw/nagios.cmd > /var/log/nagios-api.log 2>&1 &
+  RETVAL=$?
+  return $RETVAL
 }
 
 stop() {
