@@ -12,24 +12,35 @@
 
 source /etc/rc.d/init.d/functions
 
-RETVAL=0
-NAG_API_DIR="/usr/local/nagios-api"
-NAG_DIR="/usr/nagios"
 PROG="nagios-api"
 DESC="Nagios API Daemon"
+RETVAL=0
+LOGFILE="/var/log/nagios-api.log"
+
+NAG_API_BIN=/usr/local/bin/nagios-api
+NAG_API_PORT=8181
+NAG_API_PID=/var/run/$PROG.pid
+
+NAGIOS_STATUS_FILE=/var/nagios/status.dat
+NAGIOS_COMMAND_FILE=/var/nagios/rw/nagios.cmd
+NAGIOS_LOG_FILE=/var/log/nagios.log
 
 start() {
-  echo -n $"Starting $DESC ($PROG): "
-  daemon /usr/bin/python26 $NAG_API_DIR/$PROG -s $NAG_DIR/var/status.dat -c $NAG_DIR/var/rw/nagios.cmd > /var/log/nagios-api.log 2>&1 &
+  echo -n "Starting $DESC ($PROG): "
+  daemon $NAG_API_BIN -p $NAG_API_PORT -s $NAGIOS_STATUS_FILE -c $NAGIOS_COMMAND_FILE -l $NAGIOS_LOG_FILE > $LOGFILE 2>&1 &
+  
+  echo
   RETVAL=$?
   return $RETVAL
 }
 
 stop() {
-	echo -n $"Shutting down $DESC ($PROG): "
-	kill $(cat /var/run/nagios-api.pid)
-	RETVAL=$?
-	return $RETVAL
+  echo -n "Shutting down $DESC ($PROG): "
+  killproc $PROG
+
+  echo
+  RETVAL=$?
+  return $RETVAL
 }
 
 case "$1" in
