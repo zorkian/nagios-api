@@ -15,7 +15,7 @@ source /etc/rc.d/init.d/functions
 PROG="nagios-api"
 DESC="Nagios API Daemon"
 RETVAL=0
-LOGFILE="/var/log/nagios-api.log"
+LOGFILE="/var/log/nagios/nagios-api.log"
 
 NAG_API_BIN=/usr/local/bin/nagios-api
 NAG_API_PORT=8181
