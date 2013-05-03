@@ -861,6 +861,7 @@ def _exitfunc(*args):
     if PID_FILE is not None and os.path.isfile(PID_FILE):
         print "Exiting. Cleaning up PID."
         os.unlink(PID_FILE)
+        sys.exit(0)
 
 
 if __name__ == '__main__':
