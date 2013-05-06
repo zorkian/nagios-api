@@ -131,8 +131,6 @@ def http_host(req, objid, reqobj):
             ret[host_key] = value 
         # return comment and downtime data too, if either exists
         elif type(value) == dict:
-            if len( value.keys() ) > 1: # dicts with Comment and Downtime objects as values have only one key; ignore all others
-                continue
             for k, v in value.iteritems():
                 if isinstance( v, Comment ):
                     ret["comment"] = v.for_json()
