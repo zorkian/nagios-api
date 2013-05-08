@@ -124,6 +124,8 @@ def http_host(req, objid, reqobj):
     elif objid not in NAGIOS.hosts.keys():
         return json_error(req, 'Unknown hostname.')
     ret = {}
+    ret['comment'] = []
+    ret['downtime'] = []
     host_keys = [ x for x in dir(NAGIOS.hosts[objid]) if not x.startswith('__') ]
     for host_key in host_keys:
         value = getattr(NAGIOS.hosts[objid], host_key)
@@ -131,13 +133,11 @@ def http_host(req, objid, reqobj):
             ret[host_key] = value 
         # return comment and downtime data too, if either exists
         elif type(value) == dict:
-            if len( value.keys() ) > 1: # dicts with Comment and Downtime objects as values have only one key; ignore all others
-                continue
             for k, v in value.iteritems():
                 if isinstance( v, Comment ):
-                    ret["comment"] = v.for_json()
+                    ret['comment'].append( v.for_json() )
                 elif isinstance( v, Downtime ):
-                    ret["downtime"] = v.for_json()
+                    ret['downtime'].append( v.for_json() )
     if objid in NAGIOS.services:
         ret['services'] = []
         for svc in NAGIOS.services[objid]:
