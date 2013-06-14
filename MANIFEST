@@ -1,0 +1,8 @@
+LICENSE
+CHANGES
+README
+nagios-api
+nagios-cli
+setup.py
+nagios/__init__.py
+nagios/core.py

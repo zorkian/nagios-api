@@ -1,3 +1,6 @@
+1.2.2: June 14th, 2013
+ * Fix the exit function to actually exit [lollipopman]
+
 1.2.1: March 21st, 2013
  * Fix SIGTERM handler to clean up pid [xb95]
 
