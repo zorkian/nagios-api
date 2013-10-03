@@ -3,7 +3,7 @@ Jinja2==2.6
 Twiggy==0.4.5
 Werkzeug==0.8.3
 diesel==3.0.16
-dnspython==1.10.0
+dnspython==1.11.1
 greenlet==0.4.0
 http-parser==0.8.1
 pyOpenSSL==0.13
