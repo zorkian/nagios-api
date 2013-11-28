@@ -91,7 +91,7 @@ def consume_host_service(args):
     del args[0]
 
     if len(args) > 0 and args[0].decode('utf-8') in NAGIOS[host]:
-        selargs += ['service=%s' % args[0]]
+        selargs += ['service=%s' % args[0].decode('utf-8')]
         del args[0]
     return selargs
 
