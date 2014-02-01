@@ -95,6 +95,11 @@ class Nagios:
         Note that Service may be None, in which case we return a Host.
 
         '''
+        if service is not None:
+            try:
+                service = service.encode('utf-8')
+            except:
+                pass
         if host not in self.hosts:
             return None
         if service is None:  # Only a Host if they really want it.

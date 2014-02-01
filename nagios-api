@@ -731,7 +731,7 @@ def send_nagios_command(*args):
     if len(args) < 2:
         return False
     arg = '[%d] ' % int(time.time()) + ';'.join(unicode(j) for j in args)
-    arg = arg.encode('latin1')
+    arg = arg.encode('utf-8')
     with synchronized():
         log.info('Sending command: %s' % arg)
         with open(CMDFILE, 'w') as pipe:
