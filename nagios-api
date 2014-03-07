@@ -262,34 +262,38 @@ def http_schedule_downtime(req, objid, reqobj):
     if objid is not None:
         return json_error(req, 'Unexpected object ID.')
 
+    now = int(time.time())
+
     host = reqobj.get('host')
     service = reqobj.get('service')
     services_too = reqobj.get('services_too', False)
     author = reqobj.get('author', 'nagios-api')
     comment = reqobj.get('comment', 'schedule downtime')
+    start_time = reqobj.get('start_time', now)
+    fixed = reqobj.get('fixed', 1)
     try:
         dur = int(reqobj.get('duration', 0))
     except ValueError:
         dur = 0
-
+    end_time = reqobj.get('end_time', start_time + dur)
+    
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
         return json_error(req, 'Host or service not found.')
     if dur < 60 or dur > 86400 * 7:  # Upper limit?
         return json_error(req, 'Downtime must be between 60 seconds and a week.')
 
-    now = int(time.time())
     if obj.service is not None:
-        if not send_nagios_command('SCHEDULE_SVC_DOWNTIME', host, service, now,
-                                   now+dur, 1, 0, 0, author, comment):
+        if not send_nagios_command('SCHEDULE_SVC_DOWNTIME', host, service, start_time,
+                                   end_time, fixed, 0, dur, author, comment):
             return json_error(req, 'Failed sending command to Nagios.')
     else:
-        if not send_nagios_command('SCHEDULE_HOST_DOWNTIME', host, now, now+dur,
-                                   1, 0, 0, author, comment):
+        if not send_nagios_command('SCHEDULE_HOST_DOWNTIME', host, start_time, end_time,
+                                   fixed, 0, dur, author, comment):
             return json_error(req, 'Failed sending command to Nagios.')
         if services_too:
-            if not send_nagios_command('SCHEDULE_HOST_SVC_DOWNTIME', host, now, now+dur,
-                                       1, 0, 0, author, comment):
+            if not send_nagios_command('SCHEDULE_HOST_SVC_DOWNTIME', host, start_time, end_time,
+                                       fixed, 0, dur, author, comment):
                 return json_error(req, 'Failed sending command to Nagios.')
     return json_response(req, 'scheduled')
 
