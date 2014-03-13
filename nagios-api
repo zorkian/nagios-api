@@ -738,8 +738,14 @@ def send_nagios_command(*args):
     arg = arg.encode('utf-8')
     with synchronized():
         log.info('Sending command: %s' % arg)
-        with open(CMDFILE, 'w') as pipe:
-            pipe.write(arg + '\n')
+        try:
+          fd = os.open(CMDFILE, os.O_WRONLY)
+          os.write(fd, arg + '\n')
+          os.close(fd)
+        except Exception as e:
+          log.error(e)
+          return False
+        return True
     return True
 
 
