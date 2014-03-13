@@ -45,12 +45,12 @@ The server speaks JSON. You can either GET data from it or POST data to
 it and take an action. It's pretty straightforward, here's an idea of
 what you can do from the command line:
 
-    curl http://localhost:6315/state
+    curl http://localhost:8080/state
 
 That calls the `state` method and returns the JSON result.
 
     curl -d '{"host": "web01", "duration": 600}' \
-      http://localhost:6315/schedule_downtime
+      http://localhost:8080/schedule_downtime
 
 This POSTs the given JSON object to the `schedule_downtime` method. You
 will note that all objects returned follow a predictable format:
@@ -192,7 +192,7 @@ Very simply, this immediately lifts a downtime that is currently in
 effect on a host or service. If you know the `downtime_id`, you can
 specify that as a URL argument like this:
 
-  curl -d "{}" http://localhost:6315/cancel_downtime/15
+  curl -d "{}" http://localhost:8080/cancel_downtime/15
 
 That would cancel the downtime with `downtime_id` of 15. Most of the
 time you will probably not have this information and so we allow you to
