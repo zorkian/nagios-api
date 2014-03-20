@@ -17,13 +17,13 @@ DESC="Nagios API Daemon"
 RETVAL=0
 LOGFILE="/var/log/nagios/nagios-api.log"
 
-NAG_API_BIN=/usr/local/bin/nagios-api
-NAG_API_PORT=8181
+NAG_API_BIN=/usr/bin/nagios-api
+NAG_API_PORT=6315
 NAG_API_PID=/var/run/$PROG.pid
 
-NAGIOS_STATUS_FILE=/var/nagios/status.dat
-NAGIOS_COMMAND_FILE=/var/nagios/rw/nagios.cmd
-NAGIOS_LOG_FILE=/var/log/nagios.log
+NAGIOS_STATUS_FILE=/var/log/nagios/status.dat
+NAGIOS_COMMAND_FILE=/var/spool/nagios/cmd/nagios.cmd
+NAGIOS_LOG_FILE=/var/log/nagios/nagios.log
 
 start() {
   echo -n "Starting $DESC ($PROG): "
