@@ -346,6 +346,52 @@ def http_cancel_downtime(req, objid, reqobj):
         return json_response(req, 'none found')
 
 
+
+def http_schedule_hostgroup_downtime(req, objid, reqobj):
+    '''Given a hostgroup, schedule downtime for all the hosts in the hostgroup. 
+    The main mode for this API is to schedule a hard downtime that starts now and ends
+    after so many seconds.
+
+    If you specify the hostgroup parameter and also set 'services_too' to
+    true, we will schedule downtime for the all the hosts and the services on it.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+
+    now = int(time.time())
+
+    hostgroup = reqobj.get('hostgroup')
+    services_too = reqobj.get('services_too', False)
+    author = reqobj.get('author', 'nagios-api')
+    comment = reqobj.get('comment', 'schedule downtime')
+    start_time = reqobj.get('start_time', now)
+    fixed = reqobj.get('fixed', 1)
+    try:
+        dur = int(reqobj.get('duration', 0))
+    except ValueError:
+        dur = 0
+    end_time = reqobj.get('end_time', start_time + dur)
+    
+    if hostgroup is None:
+        return json_error(req, 'Hostgroup not specified.')
+    if dur < 60 or dur > 86400 * 7:  # Upper limit?
+        return json_error(req, 'Downtime must be between 60 seconds and a week.')
+
+    if not send_nagios_command('SCHEDULE_HOSTGROUP_HOST_DOWNTIME', hostgroup, start_time,
+                                end_time, fixed, 0, dur, author, comment):
+        return json_error(req, 'Failed sending command to Nagios.')
+    if services_too:
+        if not send_nagios_command('SCHEDULE_HOSTGROUP_SVC_DOWNTIME', hostgroup, start_time, end_time,
+                                    fixed, 0, dur, author, comment):
+            return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'scheduled')
+
+
+
 def http_submit_result(req, objid, reqobj):
     '''Submits a check result for a host or service. This is mostly used
     for passive services where Nagios is not responsible for doing the
@@ -707,6 +753,7 @@ def http_handler(req):
         'POST': {
             'cancel_downtime': http_cancel_downtime,
             'schedule_downtime': http_schedule_downtime,
+            'schedule_hostgroup_downtime': http_schedule_hostgroup_downtime,
             'disable_notifications': http_disable_notifications,
             'enable_notifications': http_enable_notifications,
             'submit_result': http_submit_result,
