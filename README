@@ -332,6 +332,39 @@ We do not have the ability to get the `downtime_id` that is generated,
 unfortunately, as that would require waiting for Nagios to regenerate
 the status file.
 
+
+schedule_hostgroup_downtime
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This method is used for creating fixed length downtimes on all the hosts
+belonging to a hostgroup. You are allowed to specify the author and comment
+to go with the downtime, too. The JSON parameters are:
+
+*hostgroup*='STRING' [required]::
+    Which hostgroup to schedule a downtime for. This must be specified.
+
+*duration*='INTEGER' [required]::
+    How many seconds this downtime will last for. They begin immediately
+    and continue for `duration` seconds before ending.
+
+*services_too*='BOOL'::
+    Optional. If true, then we will schedule a downtime for all the hosts in
+    the hostgroup and all of the services on those hosts.
+    Potentially many downtimes are scheduled.
+
+*author*='STRING'::
+    Optional. The name of the author. This is useful in UIs if you want
+    to disambiguate who is doing what.
+
+*comment*='STRING'::
+    Optional. As above, useful in the UI.
+
+The result of this method is a text string that indicates whether or
+not the downtimes have been scheduled or if a different error occurred.
+We do not have the ability to get the `downtime_id` that is generated,
+unfortunately, as that would require waiting for Nagios to regenerate
+the status file.
+
+
 state
 ~~~~~
 This method takes no parameters. It returns a large JSON object
