@@ -22,6 +22,7 @@ import sys
 import time
 import types
 import atexit
+import urllib
 from gzip import GzipFile
 from StringIO import StringIO
 from optparse import OptionParser
@@ -37,7 +38,7 @@ from signal import signal, SIGTERM
 CMDFILE = None
 CMD_ENABLED = False
 LOG_ENABLED = False
-URL_REGEX = re.compile(r'^/(\w+)(?:/([\w\d\.\-]+)?)?$')
+URL_REGEX = re.compile(r'^/(\w+)(?:/([\w\d\.\-\s]+)?)?$')
 NAGIOS = None
 NLOG = []
 NLOGLINES = 0
@@ -718,6 +719,7 @@ def http_handler(req):
     # All requests should follow this very simple format.
     global URL_REGEX
     url = req.script_root + req.path
+    url = urllib.unquote(url).decode('utf8')
     res = URL_REGEX.match(url)
     if res is None:
         return json_error(req, 'Invalid request URI')
