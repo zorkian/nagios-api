@@ -82,6 +82,26 @@ def json_response(req, msg):
     return _send_json(req, True, msg)
 
 
+def http_problems(req, objid, reqobj):
+    '''Get a host->service mapping for "All Problems". This is
+    the method to use to get the data needed to display a simmilar
+    view to the nagios "Problems" view.
+
+    '''
+    global NAGIOS
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+
+    hosts = {}
+    for host, host_data in NAGIOS.for_json().items():
+        for service,service_data in host_data['services'].items():
+            if (int(service_data['current_state']) == 0):
+                del host_data['services'][service]
+        if host_data['services']:
+            hosts[host] = host_data
+    return json_response(req, hosts)
+
+
 def http_state(req, objid, reqobj):
     '''Get a host->service mapping and return the basic state. This is
     the method to use to have status scripts or web interfaces that
@@ -751,6 +771,7 @@ def http_handler(req):
             'objects': http_objects,
             'host': http_host,
             'service': http_service,
+            'problems': http_problems,
         },
         'POST': {
             'cancel_downtime': http_cancel_downtime,
