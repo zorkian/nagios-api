@@ -1,3 +1,9 @@
+/.vagrant
+/debian/nagios-api/
+/debian/*.debhelper
+/debian/*.log
 *.pyc
-build
-dist
+/dist/
+/debian/files
+/debian/*.substvars
+
