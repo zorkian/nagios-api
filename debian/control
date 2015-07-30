@@ -1,0 +1,12 @@
+Source: nagios-api
+Section: python
+Priority: extra
+Maintainer: Sebastien Bariteau <numkem@numkem.org>
+Build-Depends: debhelper (>= 9), python, dh-virtualenv (>= 0.6), python-dev, libssl-dev
+Standards-Version: 0.3.9
+
+Package: nagios-api
+Architecture: any
+Pre-Depends: dpkg (>= 1.16.1), python2.7, ${misc:Pre-Depends}
+Depends: ${python:Depends}, ${misc:Depends}
+Description: Nagios API
