@@ -253,6 +253,24 @@ Simply returns the most recent 1000 items in the Nagios event log. These
 are currently unparsed. There is a plan to parse this in the future and
 return event objects.
 
+status
+~~~
+Simply returns a JSON that contains nagios status objects.
+
+restart_nagios
+~~~
+Restarts the nagios service.
+
+update_host
+~~~
+This method will create/update a nagios configuration file that contains devices.
+
+*file_name*='STRING' [required]::
+    File name for the configuration.
+
+*text*='STRING' [required]::
+    Content of the configuration file.
+
 objects
 ~~~~~~~
 Returns a dict with the key being hostnames and the values being a list
