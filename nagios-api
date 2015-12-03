@@ -267,6 +267,73 @@ def http_enable_notifications(req, objid, reqobj):
                 return json_error(req, 'Failed sending command to Nagios.')
     return json_response(req, 'enabled')
 
+def http_disable_checks(req, objid, reqobj):
+    '''Given a service or host, disable active checks for it.
+
+    If you specify the host parameter and also set 'services_too' to
+    true, we will act on the host and all of the services on it.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    services_too = reqobj.get('services_too', False)
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Host or service not found.')
+
+    now = int(time.time())
+    if obj.service is not None:
+        if not send_nagios_command('DISABLE_SVC_CHECK', host, service):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('DISABLE_HOST_CHECK', host):
+            return json_error(req, 'Failed sending command to Nagios.')
+        if services_too:
+            if not send_nagios_command('DISABLE_HOST_SVC_CHECKS', host):
+                return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'disabled')
+
+
+def http_enable_checks(req, objid, reqobj):
+    '''Given a service or host, enable active check for it.
+
+    If you specify the host parameter and also set 'services_too' to
+    true, we will act on the host and all of the services on it.
+
+    '''
+    global NAGIOS, CMD_ENABLED
+    if not CMD_ENABLED:
+        return json_error(req, 'External commands not enabled on nagios-api.')
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+
+    host = reqobj.get('host')
+    service = reqobj.get('service')
+    services_too = reqobj.get('services_too', False)
+
+    obj = NAGIOS.host_or_service(host, service)
+    if obj is None:
+        return json_error(req, 'Host or service not found.')
+
+    now = int(time.time())
+    if obj.service is not None:
+        if not send_nagios_command('ENABLE_SVC_CHECK', host, service):
+            return json_error(req, 'Failed sending command to Nagios.')
+    else:
+        if not send_nagios_command('ENABLE_HOST_CHECK', host):
+            return json_error(req, 'Failed sending command to Nagios.')
+        if services_too:
+            if not send_nagios_command('ENABLE_HOST_SVC_CHECKS', host):
+                return json_error(req, 'Failed sending command to Nagios.')
+    return json_response(req, 'enabled')
+
 
 def http_schedule_downtime(req, objid, reqobj):
     '''Given a service or host, schedule downtime for it. The main mode
@@ -779,6 +846,8 @@ def http_handler(req):
             'schedule_hostgroup_downtime': http_schedule_hostgroup_downtime,
             'disable_notifications': http_disable_notifications,
             'enable_notifications': http_enable_notifications,
+            'disable_checks': http_disable_checks,
+            'enable_checks': http_enable_checks,
             'submit_result': http_submit_result,
             'acknowledge_problem': http_acknowledge_problem,
             'remove_acknowledgement': http_remove_acknowledgement,
