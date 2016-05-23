@@ -398,6 +398,23 @@ Nagios.
 The response indicates if we successfully wrote the command to the log.
 
 
+DOCKER
+------
+
+A Docker container is available for convenience. It needs to be run on
+the same server as the nagios installation.
+
+First determine the location of the `status.dat`, `nagios.log`, and
+`nagios.cmd` files. Map these files into the Docker container. The
+container can be started using the following command:
+
+`docker run -v /var/lib/nagios3/rw/nagios.cmd:/opt/nagios.cmd \
+-v /var/cache/nagios3/status.dat:/opt/status.dat \
+-v /var/log/nagios3/nagios.log:/opt/nagios.log \
+-p 2337:8080 inventid/nagios-python-api`
+
+In the above case, the API will be exposed on port 2337.
+
 AUTHOR
 ------
 Written by Mark Smith <mark@qq.is> while under the employ of Bump
