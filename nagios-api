@@ -23,6 +23,8 @@ import time
 import types
 import atexit
 import urllib
+import pwd
+import grp
 from gzip import GzipFile
 from StringIO import StringIO
 from optparse import OptionParser
@@ -44,6 +46,7 @@ NLOG = []
 NLOGLINES = 0
 ALLOW_ORIGIN = None
 PID_FILE = "/var/run/nagios-api.pid"
+CFG_DIRECTORY = "/usr/local/nagios/etc/objects"
 
 
 def _send_json(req, success, content):
@@ -135,6 +138,16 @@ def http_objects(req, objid, reqobj):
     return json_response(req, ret)
 
 
+def http_status(req, objid, reqobj):
+    global NAGIOS
+    if objid is not None:
+        return json_error(req, 'Unexpected object ID.')
+    ret = {}
+    ret['info'] = NAGIOS.info.for_json()
+    ret['program'] = NAGIOS.program.for_json()
+    return json_response(req, ret)
+
+
 def http_host(req, objid, reqobj):
     '''Get a view of a single host.
     Shows all of the variables for the host object.
@@ -164,6 +177,73 @@ def http_host(req, objid, reqobj):
         for svc in NAGIOS.services[objid]:
             ret['services'].append(svc)
     return json_response(req, ret)
+
+
+def _mkdir_recursive(self, path):
+    sub_path = os.path.dirname(path)
+    if not os.path.exists(sub_path):
+        _mkdir_recursive(self, sub_path)
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+def http_restart_nagios(req, objid, reqobj):
+    if not send_nagios_command('RESTART_PROGRAM'):
+        return json_error(req, 'Restart failed.')
+    else:
+        return json_response(req, 'Restart successful')
+
+def http_send_raw_command(req, objid, reqbj):
+    command = reqobj['command']
+    if not command:
+        return json_error(req, "Missing command to send to nagios")
+
+    if not send_nagios_command(command):
+        return json_error(req, "Nagios command failed")
+
+    return json_response(req, "Nagios command succeeded")
+
+def http_update_host(req, objid, reqobj):
+
+    global CFG_DIRECTORY
+
+    _mkdir_recursive(None, CFG_DIRECTORY)
+    file_name = reqobj['file_name']
+    text = reqobj['text']
+
+    if not file_name:
+        return json_error(req, 'No file path specified.')
+
+    if not text:
+        return json_error(req, 'No text specified.')
+
+    file_path = CFG_DIRECTORY + "/" + file_name
+
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+
+    try:
+        f = file(file_path, 'w')
+        f.write(text)
+        f.close()
+
+        sys.stdout.write("file saved %s " % file_name)
+
+        uid = pwd.getpwnam("nagios").pw_uid
+        gid = grp.getgrnam("nagios").gr_gid
+
+        if uid and gid:
+            os.chown(file_path, uid, gid)
+
+        ret = {}
+        ret['message'] = "Update file "+file_path
+        return json_response(req, ret)
+    except Exception as e:
+        sys.stderr.write("%s\n" % e)
+        sys.stderr.write("Unable to write file: %s\n" % file_name)
+
+        ret = {}
+        ret['message'] = "Unable to write file: "+file_path
+        return json_response(req, ret)
 
 
 def http_service(req, objid, reqobj):
@@ -839,6 +919,9 @@ def http_handler(req):
             'host': http_host,
             'service': http_service,
             'problems': http_problems,
+            'status': http_status,
+            'service': http_service,
+            'restart_nagios': http_restart_nagios
         },
         'POST': {
             'cancel_downtime': http_cancel_downtime,
@@ -854,6 +937,8 @@ def http_handler(req):
             'add_comment': http_add_comment,
             'delete_comment': http_delete_comment,
             'schedule_check': http_schedule_check,
+            'update_host': http_update_host,
+            'raw_command': http_send_raw_command
         }
     }
 
@@ -870,8 +955,10 @@ def send_nagios_command(*args):
     '''
     global CMDFILE, CMD_ENABLED
     if not CMD_ENABLED:
+        log.error('Command is disabled')
         return False  # May not be enabled.
-    if len(args) < 2:
+    if len(args) < 1:
+        log.error('Not enough parameters to send command')
         return False
     arg = '[%d] ' % int(time.time()) + ';'.join(unicode(j) for j in args)
     arg = arg.encode('utf-8')
@@ -896,6 +983,11 @@ def read_status(statusfile):
     global NAGIOS
     mtime = None
     while True:
+        if not os.path.isfile(statusfile):
+            NAGIOS = Nagios(None)
+            sleep(5)
+            continue
+
         stat = os.stat(statusfile)
         if mtime is None or stat.st_mtime > mtime:
             try:

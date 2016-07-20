@@ -8,17 +8,20 @@ class Nagios:
     from the status file that Nagios maintains.
 
     '''
-    def __init__(self, statusfile):
+    def __init__(self, statusfile=None):
         '''Create a new Nagios state store.  One argument, statusfile, is used to
         indicate where the status file is.  This object is intended to be read-only
         once it has been created.
 
         '''
+        self.info = Info({})
+        self.program = Program({})
         self.hosts = {}
         self.services = {}
         self.comments = {}
         self.downtimes = {}
-        self._update(statusfile)
+        if statusfile is not None:
+            self._update(statusfile)
 
     def _update(self, statusfile):
         '''Read the status file from Nagios and parse it.  Responsible for building
@@ -75,6 +78,10 @@ class Nagios:
                 self.comments[int(obj['comment_id'])] = Comment(obj)
             elif obj['type'].endswith('downtime'):
                 self.downtimes[int(obj['downtime_id'])] = Downtime(obj)
+            elif obj['type'] == 'info':
+                self.info = Info(obj)
+            elif obj['type'] == 'programstatus':
+                self.program = Program(obj)
         f.close()
 
         for host in self.services:
@@ -83,7 +90,7 @@ class Nagios:
         for c in self.comments.itervalues():
             tmp = self.host_or_service(c.host, c.service)
             if (tmp is None):
-                # FIXME: throw something? 
+                # FIXME: throw something?
                 pass
             else:
                 tmp.attach_comment(c)
@@ -141,6 +148,56 @@ class NagiosObject:
         for key in self.essential_keys:
             obj[key] = getattr(self, key, None)
         return obj
+
+
+class Info(NagiosObject):
+    def __init__(self, obj):
+        NagiosObject.__init__(self, obj)
+        self.essential_keys = ['created', 'version', 'last_update_check',
+           'update_available', 'last_version', 'new_version']
+
+
+class Program(NagiosObject):
+    def __init__(self, obj):
+        NagiosObject.__init__(self, obj)
+        self.essential_keys = [
+            'modified_host_attributes',
+            'modified_service_attributes',
+            'nagios_pid',
+            'daemon_mode',
+            'program_start',
+            'last_log_rotation',
+            'enable_notifications',
+            'active_service_checks_enabled',
+            'passive_service_checks_enabled',
+            'active_host_checks_enabled',
+            'passive_host_checks_enabled',
+            'enable_event_handlers',
+            'obsess_over_services',
+            'obsess_over_hosts',
+            'check_service_freshness',
+            'check_host_freshness',
+            'enable_flap_detection',
+            'process_performance_data',
+            'global_host_event_handle',
+            'global_service_event_handle',
+            'next_comment_id',
+            'next_downtime_id',
+            'next_event_id',
+            'next_problem_id',
+            'next_notification_id',
+            'active_scheduled_host_check_stats',
+            'active_ondemand_host_check_stats',
+            'passive_host_check_stats',
+            'active_scheduled_service_check_stats',
+            'active_ondemand_service_check_stats',
+            'passive_service_check_stats',
+            'cached_host_check_stats',
+            'cached_service_check_stats',
+            'external_command_stats',
+            'parallel_host_check_stats',
+            'serial_host_check_stats'
+        ]
 
 
 class HostOrService(NagiosObject):
