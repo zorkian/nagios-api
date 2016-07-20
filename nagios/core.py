@@ -55,7 +55,7 @@ class Nagios:
                         val = performance_data
                     cur[key] = val
                 elif "#" in line:
-                    if line.find("NAGIOS STATE RETENTION FILE") is not -1.0:
+                    if not line.find("NAGIOS STATE RETENTION FILE"):
                         raise ValueError("You appear to have used the state retention file instead of the status file. Please change your arguments and try again.")
             if cur is not None:
                 yield cur
