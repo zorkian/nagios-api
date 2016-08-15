@@ -1,0 +1,59 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:             nagios-api
+# Default-Start:        2 3 4 5
+# Default-Stop:
+# Short-Description:    Nagios API
+### END INIT INFO
+
+# Nagios-API start-stop-daemon
+
+# LSB functions
+. /lib/lsb/init-functions
+
+NAME=nagios-api
+PIDFILE=/var/run/$NAME.pid
+DAEMON=/usr/share/python/nagios-api/bin/nagios-api
+
+# Sourcing default
+. /etc/default/$NAME
+
+start_api() {
+    start-stop-daemon \
+        --start \
+        --quiet \
+        --pidfile $PIDFILE \
+        --background \
+        --startas /bin/bash -- \
+        -c "exec $DAEMON -p $PORT -s $NAGIOS_STATUS -c $NAGIOS_COMMAND -l $NAGIOS_LOG -f $PIDFILE $OPTION >> $LOGFILE 2>&1"
+}
+
+case "$1" in
+    start)
+        echo -n "Starting daemon: "$NAME
+        start_api
+        echo
+    ;;
+    stop)
+        echo -n "Stopping daemon: "$NAME
+        start-stop-daemon --stop --quiet --oknodo --pidfile $PIDFILE
+        echo
+    ;;
+    restart)
+        echo -n "Restarting daemon: "$NAME
+        start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile $PIDFILE
+        start_api
+        echo
+    ;;
+
+  status)
+        status_of_proc -p $PIDFILE $DAEMON $NAME && exit 0 || exit $?
+    ;;
+
+    *)
+        echo "Usage: "$1" {start|stop|restart}"
+        exit 1
+esac
+
+exit 0
