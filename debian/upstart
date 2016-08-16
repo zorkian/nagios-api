@@ -8,5 +8,5 @@ respawn
 
 script
   . /etc/default/nagios-api
-  exec /usr/share/python/nagios-api/bin/nagios-api -p $PORT -s $NAGIOS_STATUS -c $NAGIOS_COMMAND -l NAGIOS_LOG $OPTION >> $LOGFILE 2>&1
+  exec /usr/share/python/nagios-api/bin/nagios-api -p $PORT -s $NAGIOS_STATUS -c $NAGIOS_COMMAND -l $NAGIOS_LOG $OPTION >> $LOGFILE 2>&1
 end script
