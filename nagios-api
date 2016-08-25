@@ -1044,7 +1044,7 @@ def main(argv):
     '''A simple REST API for Nagios3.
 
     '''
-    global CMDFILE, CMD_ENABLED, LOG_ENABLED, ALLOW_ORIGIN, PID_FILE
+    global CMDFILE, CMD_ENABLED, LOG_ENABLED, ALLOW_ORIGIN, PID_FILE, CFG_DIRECTORY
     app = Application()
 
     parser = OptionParser(description='Give Nagios a REST API.')
@@ -1056,6 +1056,8 @@ def main(argv):
     parser.add_option('-c', '--command-file', dest='commandfile', metavar='FILE',
             default='/var/lib/nagios3/rw/nagios.cmd', help='The file to write '
             'Nagios commands to.')
+    parser.add_option('-d', '--config-directory', dest='cfgdirectory', metavar='CFGDIR',
+            default='/usr/local/nagios/etc/objects', help='Storage location for update_host endpoint files')
     parser.add_option('-l', '--log-file', dest='logfile', metavar='FILE',
             default='/var/log/nagios3/nagios.log', help='The file Nagios writes '
             'log events to.')
@@ -1082,7 +1084,8 @@ def main(argv):
         CMDFILE = options.commandfile
     if options.alloworigin:
         ALLOW_ORIGIN = options.alloworigin
-
+    
+    CFG_DIRECTORY = options.cfgdirectory
     PID_FILE = options.pid_file
     write_pid()
 
