@@ -1056,7 +1056,7 @@ def main(argv):
     parser.add_option('-c', '--command-file', dest='commandfile', metavar='FILE',
             default='/var/lib/nagios3/rw/nagios.cmd', help='The file to write '
             'Nagios commands to.')
-    parser.add_option('-d', '--config-directory', dest='cfgdirectory', metavar='CFGDIR',
+    parser.add_option('-d', '--config-directory', dest='cfgdirectory', metavar='PATH',
             default='/usr/local/nagios/etc/objects', help='Storage location for update_host endpoint files')
     parser.add_option('-l', '--log-file', dest='logfile', metavar='FILE',
             default='/var/log/nagios3/nagios.log', help='The file Nagios writes '
