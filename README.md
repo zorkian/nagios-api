@@ -95,6 +95,13 @@ commands are sent. If your Nagios installation does not allow
 external commands, do not set this option.
 
 ```
+-d, --config-directory=PATH
+```
+
+The directory in which Nagios will look for object files and import
+hosts into its internal database for monitoring.
+
+```
 -s, --status-file=FILE
 ```
 
