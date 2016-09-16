@@ -417,6 +417,11 @@ The host to schedule a check for. Required.
 If present, we'll schedule a check on this service at the given
 time.
 
+`all_services` = `BOOL [optional]`
+
+If present, we'll schedule a check on again all services at the given
+time.
+
 `check_time` = `INTEGER [optional]`
 
 Optional, defaults to now. You can specify what time you want the check
