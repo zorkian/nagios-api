@@ -44,7 +44,7 @@ curl http://localhost:8080/state
 That calls the `state` method and returns the JSON result.
 
 ```
-curl -d '{"host": "web01", "duration": 600}' http://localhost:8080/schedule_downtime
+curl -d '{"host": "web01", "duration": 600}' -H 'Content-Type: application/json' http://localhost:8080/schedule_downtime
 ```
 
 This POSTs the given JSON object to the `schedule_downtime` method. You
