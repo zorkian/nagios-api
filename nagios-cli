@@ -128,17 +128,25 @@ def api(args):
         method = 'POST'
     payload = dumps(obj) if method == 'POST' else None
 
-    # Construct the request object to send it out
     try:
         if payload is None:
-            res = requests.get(url)
+            if AUTH :
+                res = requests.get(url, auth=(USER,PASSWORD))
+            else:
+                res = requests.get(url)
         else:
-            res = requests.post(url, data=payload,
-                    headers={'Content-Type': 'application/json'})
+            if AUTH :
+                res = requests.post(url, data=payload, auth=(USER,PASSWORD),
+                        headers={'Content-Type': 'application/json'})
+            else:
+                res = requests.post(url, data=payload,
+                        headers={'Content-Type': 'application/json'})
     except (requests.ConnectionError, requests.Timeout):
         return critical('Failed connecting to nagios-api server')
     if res is None:
         return critical('Failed requesting resource')
+    if res.status_code == 401:
+        return critical('User and or password provided are incorrect')
 
     # Probably a JSON response, get it
     try:
@@ -649,7 +657,7 @@ def main(argv):
     '''Where the fun begins. Actually do something useful.
 
     '''
-    global URL, NAGIOS
+    global URL, NAGIOS, AUTH, USER, PASSWORD
 
     # Parse out command line options
     p = OptionParser(usage=trim(__doc__))
@@ -658,6 +666,10 @@ def main(argv):
         help='Host to connect to', metavar='HOST')
     p.add_option('-p', '--port', dest='port', type='int', default=6315,
         help='Port to connect to', metavar='PORT')
+    p.add_option('-U', '--user', dest='user',
+        help='User to connect with', metavar='USER')
+    p.add_option('-P', '--password', dest='password',
+        help='Password to connect with', metavar='PASSWORD')
     p.add_option('-u', '--url', dest='url',
         help='URL to use instead of host:port', metavar='URL')
     p.add_option('--raw', dest='raw', action='store_true',
@@ -667,6 +679,12 @@ def main(argv):
         URL = opts.url
     else:
         URL = 'http://%s:%d' % (opts.host, opts.port)
+    if opts.user is not None and opts.password is not None:
+        AUTH = True
+        USER = opts.user
+        PASSWORD = opts.password
+    else:
+        AUTH = False
 
     # If no more arguments, show usage
     if len(args) <= 0:
