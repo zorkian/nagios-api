@@ -652,7 +652,7 @@ def http_acknowledge_problem(req, objid, reqobj):
     if obj is None:
         return json_error(req, 'Failed to find host or service to update.')
 
-    if not 'comment':
+    if not comment:
         return json_error(req, 'Required parameter "comment" not found.')
 
     try:
