@@ -778,7 +778,7 @@ def http_delete_comment(req, objid, reqobj):
     if obj is None:
         return json_error(req, 'Failed to find host or service to update.')
 
-    if not 'comment_id':
+    if not comment_id:
         return json_error(req, 'Required parameter "comment" not found.')
 
     try:
