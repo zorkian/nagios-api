@@ -448,8 +448,13 @@ def http_schedule_downtime(req, objid, reqobj):
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
         return json_error(req, 'Host or service not found.')
-    if dur < 60 or dur > 86400 * 7:  # Upper limit?
-        return json_error(req, 'Downtime must be between 60 seconds and a week.')
+    if fixed == 1:
+        # duration is unused by Nagios for fixed downtime
+        dur = 0
+    else: # flexible downtime
+        # The Nagios C code defines duration as an unsigned long
+        if dur < 1 or dur > 4294967295:
+            return json_error(req, 'Flexible dowtime duration must be between 1 and 4,294,967,295 seconds')
 
     if obj.service is not None:
         if not send_nagios_command('SCHEDULE_SVC_DOWNTIME', host, service, start_time,
@@ -546,8 +551,13 @@ def http_schedule_hostgroup_downtime(req, objid, reqobj):
 
     if hostgroup is None:
         return json_error(req, 'Hostgroup not specified.')
-    if dur < 60 or dur > 86400 * 7:  # Upper limit?
-        return json_error(req, 'Downtime must be between 60 seconds and a week.')
+    if fixed == 1:
+        # duration is unused by Nagios for fixed downtime
+        dur = 0
+    else: # flexible downtime
+        # The Nagios C code defines duration as an unsigned long
+        if dur < 1 or dur > 4294967295:
+            return json_error(req, 'Flexible dowtime duration must be between 1 and 4,294,967,295 seconds')
 
     if not send_nagios_command('SCHEDULE_HOSTGROUP_HOST_DOWNTIME', hostgroup, start_time,
                                 end_time, fixed, 0, dur, author, comment):
