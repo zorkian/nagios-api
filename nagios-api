@@ -657,6 +657,7 @@ def http_acknowledge_problem(req, objid, reqobj):
     sticky = reqobj.get('sticky', 1)
     notify = reqobj.get('notify', 1)
     persistent = reqobj.get('persistent', 0)
+    expire = reqobj.get('expire', 0)
 
     obj = NAGIOS.host_or_service(host, service)
     if obj is None:
@@ -669,17 +670,28 @@ def http_acknowledge_problem(req, objid, reqobj):
         sticky = int(sticky)
         notify = int(notify)
         persistent = int(persistent)
+        expire = int(expire)
     except ValueError:
         return json_error(req, 'Invalid value provided for one or more of sticky, notify or persistent')
 
     if obj.service is not None:
-        if not send_nagios_command('ACKNOWLEDGE_SVC_PROBLEM', host, service,
-                                    sticky, notify, persistent, author, comment):
-            return json_error(req, 'Failed sending command to Nagios.')
+        if expire > 0:
+            if not send_nagios_command('ACKNOWLEDGE_SVC_PROBLEM_EXPIRE', host, service,
+                                        sticky, notify, persistent, expire, author, comment):
+                return json_error(req, 'Failed sending command to Nagios.')
+        else:
+            if not send_nagios_command('ACKNOWLEDGE_SVC_PROBLEM', host, service,
+                                        sticky, notify, persistent, author, comment):
+                return json_error(req, 'Failed sending command to Nagios.')
     else:
-        if not send_nagios_command('ACKNOWLEDGE_HOST_PROBLEM', host, sticky,
-                                    notify, persistent, author, comment):
-            return json_error(req, 'Failed sending command to Nagios.')
+        if expire > 0:
+            if not send_nagios_command('ACKNOWLEDGE_HOST_PROBLEM_EXPIRE', host, sticky,
+                                        notify, persistent, expire, author, comment):
+                return json_error(req, 'Failed sending command to Nagios.')
+        else:
+            if not send_nagios_command('ACKNOWLEDGE_HOST_PROBLEM', host, sticky,
+                                        notify, persistent, author, comment):
+                return json_error(req, 'Failed sending command to Nagios.')
     return json_response(req, 'submitted')
 
 
@@ -1094,7 +1106,7 @@ def main(argv):
         CMDFILE = options.commandfile
     if options.alloworigin:
         ALLOW_ORIGIN = options.alloworigin
-    
+
     CFG_DIRECTORY = options.cfgdirectory
     PID_FILE = options.pid_file
     write_pid()
