@@ -642,6 +642,10 @@ def http_acknowledge_problem(req, objid, reqobj):
     persistent (0/1): If set to 1, the comment will remain even after the service
     or host problem has been resolved. Defaults to 0 (off).
 
+    expire (0/timestamp): If set, it will (given icinga >= 1.6) expire the
+    acknowledgement at the given timestamp. Seconds since the UNIX epoch. Defaults
+    to 0 (off).
+
     author (string): This is the name displayed as the creator of the
     acknowledgement. This will default to 'nagios-api'.
 
