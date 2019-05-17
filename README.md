@@ -157,6 +157,7 @@ This method allows you to acknowledge a given problem on a host or service.
   "sticky": true,
   "notify": true,
   "persistent: true,
+  "expire": 0,
   "author": "string"
 }
 ```
@@ -191,6 +192,12 @@ problem has been acknowledged.
 default FALSE. If this is enabled, the comment given will stay
 on the host or service. By default, when an acknowledgement expires, the
 comment associated with it is deleted.
+
+`expire` = `INTEGER [optional]`
+
+default 0.  If set, it will (given icinga >= 1.6) expire the
+acknowledgement at the given timestamp. Seconds since the UNIX epoch. Defaults
+to 0 (off).
 
 `author` = `STRING [optional]`
 
